@@ -8,8 +8,7 @@ The completed pilot compares LSTM and CNN-LSTM across four variants: ECG only,
 demographics, patient history, and patient history with contrastive learning.
 Persistence and repeated-window forecasts provide two simple baselines.
 
-Start with the [pilot report](Project_Documents/pilot/ASSIGNMENT_REPORT.md),
-[presentation notes](Project_Documents/pilot/PRESENTATION_NOTES.md), and
+Start with the [pilot report](Project_Documents/pilot/ASSIGNMENT_REPORT.md) and
 [results table](outputs/pilot/model_comparison.csv).
 
 ## Project layout
@@ -28,7 +27,6 @@ outputs/             Figures, comparisons, Colab bundle (Git ignored)
 Project_Documents/   Assignment reports and presentation notes
 ```
 
-The layout follows the [reference repository](https://github.com/Juthisarker/group_b_ptb_excel_ecg_his_project).
 Its trained weights and results are not reused. Use `python -m tsa` for all workflows.
 
 ## Setup
