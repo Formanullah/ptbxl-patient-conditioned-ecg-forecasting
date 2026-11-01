@@ -1,85 +1,95 @@
-# Configuration, scripts, and execution guide
+# How to configure and run the project locally
 
-This guide explains how to operate the ECG forecasting project. All commands use
-Windows PowerShell from the project root. Start with the small pilot; use a new
-configuration and new output directories for each changed experiment.
+Follow Steps 1-8 in order. Section 9 shows how to train with different parameters.
+Section 10 explains how to increase the dataset or run the full assignment.
 
-## 1. What the project does
+## Why do we use “pilot”?
 
-At 500 Hz, the model reads 300 samples (0.6 seconds) from each of 12 ECG leads and
-predicts the following 150 samples (0.3 seconds). Optional static inputs describe
-age, sex, and diagnoses from strictly earlier recordings of the same patient.
+**Pilot means a small preliminary experiment.** It is the name of a configuration,
+not a model or a required forecasting technique.
 
-The complete pipeline is:
+We created it because you asked to use less data when training took too long.
+It lets you check the pipeline and try settings on your CPU before running a
+larger experiment. The models, features and forecasting task are the same.
 
-```text
-PTB-XL waveforms + metadata
-  -> audit raw data
-  -> preprocess and normalize using training input windows
-  -> create patient-isolated training/validation/test loaders
-  -> train LSTM and CNN-LSTM variants
-  -> select checkpoints by validation forecast MSE
-  -> evaluate the selected models on test data
-  -> compare with baselines and produce figures and documents
-```
-
-## 2. Files and scripts: what each one does
-
-Use `python -m tsa <command>` to operate the package. The files inside `src/tsa/`
-are reusable modules; do not launch them directly as standalone scripts.
-
-| File or folder | Purpose | How you use it |
+| | Small run: `configs/pilot.yaml` | Full run: `configs/base.yaml` |
 | --- | --- | --- |
-| `src/tsa/__main__.py` | CLI command routing and writer lock | `python -m tsa --help` |
-| `src/tsa/config.py` | Loads YAML, validates settings, defines leads/features/variants and protocol hashes | Imported by the pipeline |
-| `src/tsa/data.py` | Audits WFDB signals, splits patients, builds historical features, normalizes, caches arrays, creates DataLoaders | `audit`, `preprocess` |
-| `src/tsa/models.py` | LSTM, CNN-LSTM, static fusion, ECG augmentations and NT-Xent loss | Used by training |
-| `src/tsa/training.py` | Optimization, checkpoint selection/resume, inference, smoke runs, baselines and timing | `train`, `evaluate`, `smoke`, `baselines`, `benchmark`, `run-experiments` |
-| `src/tsa/evaluation.py` | Voltage metrics, subgroup/lead/horizon plots, comparisons and bootstrap intervals | Used by training; `compare` |
-| `src/tsa/reporting.py` | Assignment report, presentation notes, metadata figure and Colab ZIP | `report`, `bundle` |
-| `src/tsa/__init__.py` | Package metadata | No direct execution needed |
-| `tools/status.py` | Prints run progress and writes `TRAINING_STATUS.md` | `python tools/status.py --config configs/pilot.yaml` |
-| `tools/make_notebooks.py` | Rebuilds both notebooks, replacing their existing contents | `python tools/make_notebooks.py`; only needed when editing notebook generation |
-| `tests/test_pipeline.py` | Automated integrity, model, loss, metric and resume checks | `python -m pytest -q` |
-| `configs/pilot.yaml` | Small experiment; default CLI configuration | Pass with `--config`, or omit the flag |
-| `configs/base.yaml` | Full-data experiment | Pass explicitly with `--config configs/base.yaml` |
-| `notebooks/assignment_walkthrough.ipynb` | Interactive inspection of arrays, tensor shapes and results | Open in Jupyter/VS Code |
-| `notebooks/colab_training.ipynb` | GPU training using the same package and a prepared cache | Open in Google Colab |
-| `pyproject.toml` | Package dependencies, test and lint settings | Installed through `requirements.txt` |
-| `requirements.txt` | Installs the local package with development dependencies | `pip install -r requirements.txt` |
-| `requirements-tested.txt` | Records versions tested locally | Use as a version reference |
-| `.github/workflows/ci.yml` | Runs tests, lint and formatting checks on GitHub pushes/PRs | Automatic; does not train models |
+| Training | 450 patients / 515 ECGs | 17,418 ECGs |
+| Validation | 100 patients / 108 ECGs | 2,183 ECGs |
+| Testing | 100 patients / 116 ECGs | 2,198 ECGs |
+| Maximum epochs | 5 | 25 |
+| Early-stopping patience | 3 epochs | 5 epochs |
+| Input → forecast | 300 → 150 samples at 500 Hz | Same |
+| Architectures | LSTM and CNN-LSTM | Same |
 
-## 3. Setup
+Small-run findings are preliminary. You can use the full configuration directly
+when you have enough time; small-data training is optional.
+
+**Current implementation:** small-data preprocessing selects patients from a full
+preprocessing cache. A fresh setup must therefore prepare that full cache once.
+The small configuration reduces training time, but does not avoid initial full-data
+preprocessing.
+
+## Step 1. Open the project and install it
+
+Run PowerShell in the project folder:
 
 ```powershell
 cd D:\Study\HIS_Project\Project\ptbxl_assignment
+```
+
+If the working `.venv` already exists on this computer, skip installation.
+For a fresh setup:
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
 .\.venv\Scripts\python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 .\.venv\Scripts\python -m pip install -r requirements.txt
+```
+
+Confirm that installation worked:
+
+```powershell
 .\.venv\Scripts\python -m tsa --help
 ```
 
-The commands call the environment's Python directly, so PowerShell activation is
-unnecessary. On Linux/macOS, replace `.\.venv\Scripts\python` with `.venv/bin/python`.
-On Colab, use its GPU PyTorch rather than installing the CPU wheel above.
+**Expected:** a list of commands, including `audit`, `preprocess`, `train` and
+`compare`. Use this CLI for the pipeline. You do not need to run files inside
+`src/tsa/` individually.
 
-The raw dataset directory should contain:
+## Step 2. Configure the raw dataset location
+
+The raw folder must contain:
 
 ```text
 PTB-XL/
   ptbxl_database.csv
   scp_statements.csv
-  records500/...
-  records100/...    # only required if using 100 Hz
+  records500/
+    ... waveform .hea and .dat files ...
 ```
 
-The GitHub repository contains code, documents and pilot CSV/PNG results. Raw data,
-preprocessing arrays, trained checkpoints and predictions must be prepared locally
-or obtained through your own saved artifacts. The paper PDF stays local.
+Check `data.root` in both `configs/base.yaml` and `configs/pilot.yaml`:
 
-## 4. First check: automated tests
+```yaml
+data:
+  root: PTB-XL
+```
+
+If the dataset is elsewhere, change only the root line, for example:
+
+```yaml
+  root: 'D:/Datasets/PTB-XL'
+```
+
+Keep the other fields under `data`. Use spaces for YAML indentation.
+The root must point directly to the folder containing `ptbxl_database.csv`.
+
+A GitHub clone includes code, documents and pilot CSV/PNG results. Raw ECG data,
+preprocessing arrays, checkpoints and predictions must be available locally.
+
+## Step 3. Test the code
 
 ```powershell
 .\.venv\Scripts\python -m pytest -q
@@ -87,23 +97,24 @@ or obtained through your own saved artifacts. The paper PDF stays local.
 .\.venv\Scripts\python -m ruff format --check src tests tools
 ```
 
-The current suite has 18 test cases. It creates synthetic ECG fixtures and does not
-need the full PTB-XL dataset. It tests patient isolation, historical chronology,
-missingness, train-only statistics, future-sample isolation, inverse normalization,
-model dimensions/gradients, contrastive masks, metrics, cache tampering, reproducible
-patient subsets and checkpoint resume.
+**Expected:** 18 passing tests, followed by successful lint/format checks. The tests
+use synthetic ECG fixtures, so they do not need the full dataset.
 
-If pytest cannot access the Windows temporary directory, use a fresh local directory:
+If Windows denies access to pytest's temporary folder:
 
 ```powershell
 .\.venv\Scripts\python -m pytest -q --basetemp .pytest-temp/run1 -p no:cacheprovider
 ```
 
-Use this directory only for pytest temporary files; pytest may clear its contents.
+This path is for disposable pytest files; pytest may clear its contents.
 
-## 5. Prepare real data
+## Step 4. Prepare data
 
-From a fresh clone with raw PTB-XL available, run these in order:
+If valid `data/preprocessed/manifest.json` and `data/pilot/manifest.json` already
+exist from our completed local work, skip to Step 5. Training verifies their hashes
+and protocol before using them.
+
+For a fresh setup, run:
 
 ```powershell
 .\.venv\Scripts\python -u -m tsa audit --config configs/base.yaml
@@ -111,310 +122,415 @@ From a fresh clone with raw PTB-XL available, run these in order:
 .\.venv\Scripts\python -m tsa preprocess --config configs/pilot.yaml
 ```
 
-`audit` reads the raw recordings and checks sampling rate, dimensions, lead order,
-units, finite values and patient/fold metadata. It writes an explicit failure list
-and stops if invalid records exist. Even with a pilot config, audit checks all raw
-records; it does not restrict itself to the pilot cohort.
-
-Full preprocessing extracts the fixed windows, builds static features and saves the
-full cache. Pilot preprocessing selects whole patients from that full cache and
-refits normalization on the selected training cohort. It also needs the raw metadata
-CSVs. The source cache must match the requested sampling rate and window geometry.
-
-If valid caches already exist locally, skip rebuilding them. Training validates
-their fingerprints and file hashes before using them.
-
-The official folds are 1–8 for training, 9 for validation and 10 for testing. Patients
-cannot cross split boundaries. The pilot selects 450/100/100 patients, producing
-515/108/116 recordings for the current seed and dataset.
-
-## 6. Run a short real-data check
-
-```powershell
-.\.venv\Scripts\python -m tsa smoke --config configs/pilot.yaml --model lstm --variant patient_history
-```
-
-This uses at most 128 recordings per split and at most two epochs. It checks the
-complete training/evaluation path and saves results beneath separate `smoke`
-directories. Smoke results are debugging outputs, not assignment comparison results.
-
-Optionally estimate training time:
-
-```powershell
-.\.venv\Scripts\python -m tsa benchmark --config configs/pilot.yaml
-```
-
-The benchmark measures one short training pass for each architecture with and without
-contrastive loss. It writes `benchmark.json` under the experiments directory. Estimates
-exclude validation, checkpointing and plotting; this command does not evaluate test
-performance or save model weights.
-
-## 7. Train, compare and report
-
-Run all eight models, both baselines and the report:
-
-```powershell
-.\.venv\Scripts\python -u -m tsa run-experiments --config configs/pilot.yaml
-```
-
-Or train one model:
-
-```powershell
-.\.venv\Scripts\python -u -m tsa train --config configs/pilot.yaml --model lstm --variant patient_history
-.\.venv\Scripts\python -u -m tsa train --config configs/pilot.yaml --model cnn_lstm --variant patient_history_contrastive
-```
-
-| `--model` | Meaning |
-| --- | --- |
-| `lstm` | Two-layer recurrent encoder |
-| `cnn_lstm` | Temporal convolutions, pooling and the recurrent encoder |
-
-| `--variant` | Static vector | Auxiliary contrastive loss |
-| --- | ---: | --- |
-| `ecg_only` | 0 fields | No |
-| `demographics` | 4 fields | No |
-| `patient_history` | 10 fields | No |
-| `patient_history_contrastive` | 10 fields | Yes |
-
-Training evaluates the selected model and generates its plots automatically. For
-individual follow-up operations:
-
-```powershell
-.\.venv\Scripts\python -m tsa baselines --config configs/pilot.yaml
-.\.venv\Scripts\python tools/status.py --config configs/pilot.yaml
-.\.venv\Scripts\python -m tsa evaluate --config configs/pilot.yaml --model lstm --variant patient_history
-.\.venv\Scripts\python -m tsa compare --config configs/pilot.yaml
-.\.venv\Scripts\python -m tsa report --config configs/pilot.yaml
-```
-
-`baselines` evaluates final-value persistence and repetition of the last observed
-window. `status.py` writes the progress document as well as printing progress.
-`evaluate` uses an existing best checkpoint; if saved test metrics already exist,
-it returns those metrics rather than rerunning inference. `compare` reads existing
-run artifacts and writes comparison tables/charts and paired bootstrap intervals.
-`report` uses available results to write the report and presentation notes; it does
-not train missing runs or recreate all per-model plots. It also refreshes the root
-`PRESENTATION_NOTES.md`. A complete comparison needs all eight neural runs and both
-baselines.
-
-## 8. Configuration reference
-
-Edit YAML using spaces, not tabs. Paths are interpreted from the current working
-directory, so run commands from the project root. The only CLI overrides are
-`--root` and `--device`; edit the YAML for other settings.
-
-| Setting | Pilot default | Meaning and change implications |
+| Command | What it does | How to confirm |
 | --- | --- | --- |
-| `profile` | `pilot` | Human-readable run label |
-| `data.root` | `PTB-XL` | Raw dataset location |
-| `data.cache` | `data/pilot` | Prepared arrays and manifest |
-| `data.sampling_rate` | `500` | 500 or 100 Hz; assignment protocol uses 500 |
-| `data.history` | `300` | Observed samples; 0.6 seconds at 500 Hz |
-| `data.horizon` | `150` | Future samples; 0.3 seconds at 500 Hz |
-| `data.start` | `0` | First observed sample |
-| `subset.source_cache` | `data/preprocessed` | Matching full cache used to select patients |
-| `subset.seed` | `42` | Patient-selection randomness |
-| `subset.patients.train/val/test` | `450/100/100` | Patient counts, not recording counts |
-| `model.hidden` | `128` | LSTM hidden-state size |
-| `model.depth` | `2` | Number of LSTM layers |
-| `model.dropout` | `0.2` | Between recurrent layers and in forecast head; recurrent dropout is inactive with one layer |
-| `model.static_embedding` | `32` | Width of static-feature projection |
-| `training.seed` | `42` | Initialization, shuffling and augmentation seed |
-| `training.epochs` | `5` | Maximum epochs; full configuration uses 25 |
-| `training.patience` | `3` | Stop after this many epochs without validation improvement; full uses 5 |
-| `training.batch_size` | `64` | Recordings per batch |
-| `training.lr` | `0.001` | AdamW learning rate |
-| `training.weight_decay` | `0.0001` | AdamW regularization |
-| `training.gradient_clip` | `1.0` | Maximum gradient norm |
-| `training.num_workers` | `0` | Loader processes; zero is reliable on Windows |
-| `training.threads` | `4` | PyTorch CPU threads |
-| `training.device` | `auto` | CUDA if available, otherwise CPU; also accepts `cpu` or `cuda` |
-| `contrastive.weight` | `0.1` | Weight in forecast MSE + weight × NT-Xent |
-| `contrastive.temperature` | `0.1` | Similarity scaling in NT-Xent |
-| `contrastive.jitter_std` | `0.01` | Noise standard deviation in normalized voltage units |
-| `contrastive.gain_min/gain_max` | `0.95/1.05` | Amplitude gain range shared across leads within each view |
-| `evaluation.bootstrap_samples` | `1000` | Patient resamples for paired confidence intervals |
-| `paths.experiments` | `experiments/pilot` | Model states, predictions and logs |
-| `paths.outputs` | `outputs/pilot` | Figures and CSV comparisons |
-| `paths.documents` | `Project_Documents/pilot` | Report, presentation notes and status |
+| `audit` | Checks every raw ECG's dimensions, 500 Hz rate, leads, mV units and finite values | `data/preprocessed/audit.json` has no failures |
+| Full `preprocess` | Extracts ECG windows, builds static features and fits training-only normalization | `data/preprocessed/manifest.json` exists |
+| Small `preprocess` | Selects whole patients and refits normalization on selected training records | `data/pilot/manifest.json` exists, with 515/108/116 records |
 
-The observation and forecast windows must fit inside the ten-second record:
-`start + history + horizon <= 10 * sampling_rate`. Changing sampling rate, window
-geometry or patient selection requires a new compatible cache. Changes to CNN
-channels/kernels or the 256-unit forecast head require editing `models.py`; these
-are not YAML options.
+At 500 Hz, 300 observed samples are 0.6 seconds; the next 150 samples are the
+0.3-second target. Every example contains all 12 leads.
 
-One-command overrides, which do not edit YAML:
+Official folds 1-8 are training, 9 validation and 10 testing. Patients cannot occur
+in multiple splits. Age uses training-median imputation with a missingness flag;
+missing sex uses 0.5 plus a flag; unavailable prior diagnoses use zeros plus a
+history-missing flag. Nonfinite ECG values stop preprocessing with a record list.
+
+No model comparison is needed at this stage. First establish that the data is valid.
+
+## Step 5. Create your own local training configuration
+
+The original pilot models are already complete. Reusing their configuration prints
+`SKIP completed`. To train fresh, copy the settings and choose new output folders:
 
 ```powershell
-.\.venv\Scripts\python -m tsa audit --config configs/base.yaml --root 'D:\Datasets\PTB-XL'
-.\.venv\Scripts\python -m tsa train --config configs/pilot.yaml --model lstm --variant patient_history --device cpu
+Copy-Item configs\pilot.yaml configs\local.yaml
 ```
 
-Set the root in every relevant YAML if the location should persist across commands.
-Use `--device cuda` only when CUDA-enabled PyTorch and a compatible GPU are available.
-
-## 9. Increase the experiment safely
-
-Create a copy rather than changing the completed pilot:
-
-```powershell
-Copy-Item configs\pilot.yaml configs\medium.yaml
-```
-
-In `configs/medium.yaml`, change these fields; keep the other copied fields:
+Open `configs/local.yaml` and replace its `paths` section with:
 
 ```yaml
-profile: medium
-data:
-  cache: data/medium
-subset:
-  seed: 42
-  patients:
-    train: 1500
-    val: 300
-    test: 100
-training:
-  epochs: 15
-  patience: 5
 paths:
-  experiments: experiments/medium
-  outputs: outputs/medium
-  documents: Project_Documents/medium
+  experiments: experiments/local
+  outputs: outputs/local
+  documents: Project_Documents/local
 ```
 
-This is an edit checklist, not a complete YAML file: retain `root`, window settings,
-`source_cache`, model settings and all remaining fields from the copied pilot.
-Keep the test patient count and subset seed fixed during development. Increasing
-counts with the same seed keeps earlier selected patients. Use validation results
-to choose settings; test results should serve as final comparisons.
+Keep all other sections as copied, including `data.cache: data/pilot` and
+`subset`. This reuses prepared data while saving your own models separately.
+
+Use `--config configs/local.yaml` in the following commands. Omitting `--config`
+would select the original `configs/pilot.yaml`.
+
+## Step 6. Check training with a short real-data run
+
+```powershell
+.\.venv\Scripts\python -u -m tsa smoke --config configs/local.yaml --model lstm --variant patient_history
+```
+
+This runs at most two epochs with at most 128 records per split, checking loading,
+training, checkpointing and evaluation.
+
+**Expected:** epoch losses followed by `COMPLETE` and voltage metrics. Smoke results
+are saved under `experiments/local/smoke/` and `outputs/local/smoke/`, separately
+from normal comparisons. Use smoke to check execution, not to report model quality.
+
+## Step 7. Train models
+
+Choose A or B; you do not need both.
+
+### A. Run all models automatically
+
+```powershell
+.\.venv\Scripts\python -u -m tsa run-experiments --config configs/local.yaml
+```
+
+This runs two baselines, trains all eight neural models, evaluates their selected
+checkpoints and generates the report. Continue to Step 8.
+
+### B. Run models one by one
+
+First run the baselines:
+
+```powershell
+.\.venv\Scripts\python -m tsa baselines --config configs/local.yaml
+```
+
+Then train LSTM and CNN-LSTM with the same patient information:
+
+```powershell
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model lstm --variant patient_history
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model cnn_lstm --variant patient_history
+```
+
+Each training command automatically selects the best validation checkpoint and
+evaluates it on test data, saving metrics and plots.
+
+For the complete eight-model assignment, also run:
+
+```powershell
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model lstm --variant ecg_only
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model lstm --variant demographics
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model lstm --variant patient_history_contrastive
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model cnn_lstm --variant ecg_only
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model cnn_lstm --variant demographics
+.\.venv\Scripts\python -u -m tsa train --config configs/local.yaml --model cnn_lstm --variant patient_history_contrastive
+```
+
+| Variant | Information used |
+| --- | --- |
+| `ecg_only` | ECG only |
+| `demographics` | ECG + age/sex and missingness indicators: 4 static values |
+| `patient_history` | Above + five strictly earlier diagnostic superclasses + history flag: 10 static values |
+| `patient_history_contrastive` | Same inputs, plus the auxiliary contrastive training objective |
+
+Run one training command at a time. To inspect progress from another window:
+
+```powershell
+.\.venv\Scripts\python tools/status.py --config configs/local.yaml
+```
+
+Press Ctrl+C to stop. Rerun the identical command to resume from the last completed
+epoch. Finished runs are skipped.
+
+## Step 8. Compare and read the results
+
+After the chosen models finish:
+
+```powershell
+.\.venv\Scripts\python -m tsa compare --config configs/local.yaml
+.\.venv\Scripts\python -m tsa report --config configs/local.yaml
+```
+
+The comparison command works with completed runs even before all eight finish.
+The complete assignment needs eight neural runs and two baselines.
+
+| File to open | What you learn |
+| --- | --- |
+| `outputs/local/model_comparison.csv` | MAE, RMSE and other metrics for completed runs |
+| `outputs/local/model_comparison.png` | Model comparison chart |
+| `outputs/local/paired_patient_bootstrap.csv` | Confidence intervals for pairs that have both runs |
+| `Project_Documents/local/ASSIGNMENT_REPORT.md` | Methods, measured results and linked figures |
+| `outputs/local/<model_variant>/learning_curves.png` | Training and validation behavior |
+| `outputs/local/<model_variant>/forecast_lowest_id.png` | Predicted versus true ECG for a fixed example |
+
+Compare the right pair for each question:
+
+| Question | Compare |
+| --- | --- |
+| Does adding a CNN help? | LSTM versus CNN-LSTM with the same variant |
+| Do age/sex help? | `ecg_only` versus `demographics`, same architecture |
+| Does historical diagnosis help? | `demographics` versus `patient_history`, same architecture |
+| Does contrastive learning help? | `patient_history` versus `patient_history_contrastive`, same architecture |
+| Does learning beat simple forecasting? | Neural models versus persistence/repeated-window baselines |
+
+Lower MAE/RMSE is better. MAE/RMSE are in mV; MSE is in mV squared.
+Training/validation MSE uses normalized voltages and has a different scale from test
+voltage MSE. Patient-macro MAE weights patients equally. In bootstrap comparisons,
+B minus A below zero favors B; an interval crossing zero does not establish a clear
+difference.
+
+**Use validation MSE to choose parameters.** Report the held-out test results after
+deciding the settings. Training automatically produces test metrics after each run,
+so avoid choosing hyperparameters by repeatedly looking at those test results.
+
+The existing small-data findings are in `outputs/pilot/`. Persistence has lower
+MAE than every neural model there. These five-epoch findings are preliminary.
+
+## 9. Run a model with different parameters
+
+Example: compare an LSTM with hidden size 128 against hidden size 64, using the same
+data and patient-history features.
+
+The `local.yaml` configuration uses hidden size 128. Make another configuration:
+
+```powershell
+Copy-Item configs\local.yaml configs\local_h64.yaml
+```
+
+In `configs/local_h64.yaml`, replace the `model` section:
+
+```yaml
+model:
+  hidden: 64
+  depth: 2
+  dropout: 0.2
+  static_embedding: 32
+```
+
+Replace its output paths too:
+
+```yaml
+paths:
+  experiments: experiments/local_h64
+  outputs: outputs/local_h64
+  documents: Project_Documents/local_h64
+```
+
+Keep `data.cache: data/pilot` and the complete `subset` section unchanged.
+**Changing only model/training parameters does not require preprocessing again.**
+
+Train:
+
+```powershell
+.\.venv\Scripts\python -u -m tsa train --config configs/local_h64.yaml --model lstm --variant patient_history
+```
+
+Inspect validation performance for both configurations:
+
+```powershell
+Get-Content experiments/local/lstm_patient_history/test_metrics.json | ConvertFrom-Json | Select-Object best_epoch,best_val_mse
+Get-Content experiments/local_h64/lstm_patient_history/test_metrics.json | ConvertFrom-Json | Select-Object best_epoch,best_val_mse
+```
+
+Choose using validation MSE and learning curves. Normalized validation MSE is
+comparable here because both runs use the same cache.
+
+Generate each result table:
+
+```powershell
+.\.venv\Scripts\python -m tsa compare --config configs/local.yaml
+.\.venv\Scripts\python -m tsa compare --config configs/local_h64.yaml
+```
+
+Open `outputs/local/model_comparison.csv` and
+`outputs/local_h64/model_comparison.csv` side by side.
+The CLI reads one experiment directory at a time. It does not automatically combine
+different configuration directories or calculate confidence intervals between
+arbitrary hyperparameter runs.
+
+For another learning rate, dropout or batch size, follow the same pattern: copy a
+config, change the setting, use new output folders, train the same model/variant,
+and inspect validation performance. Change one setting at a time to understand its
+effect.
+
+### Available model and training parameters
+
+These are YAML fields, not separate scripts.
+
+| Field | Small-run default | Purpose |
+| --- | --- | --- |
+| `model.hidden` | 128 | LSTM hidden-state size |
+| `model.depth` | 2 | Number of recurrent layers |
+| `model.dropout` | 0.2 | Interlayer/head dropout; recurrent dropout requires depth > 1 |
+| `model.static_embedding` | 32 | Patient-context representation size |
+| `training.epochs` | 5 | Maximum training epochs |
+| `training.patience` | 3 | Stop after this many unimproved validation epochs |
+| `training.batch_size` | 64 | ECGs per batch |
+| `training.lr` | 0.001 | AdamW learning rate |
+| `training.weight_decay` | 0.0001 | Regularization |
+| `training.gradient_clip` | 1.0 | Maximum gradient norm |
+| `training.seed` | 42 | Initialization, training shuffle and augmentation seed |
+| `training.device` | auto | CUDA when available, otherwise CPU |
+| `training.threads` | 4 | CPU threads |
+| `training.num_workers` | 0 | Loader processes; zero is reliable on Windows |
+| `contrastive.weight` | 0.1 | Auxiliary loss weight |
+| `contrastive.temperature` | 0.1 | NT-Xent similarity scaling |
+| `contrastive.jitter_std` | 0.01 | Augmentation noise in normalized units |
+| `contrastive.gain_min / gain_max` | 0.95 / 1.05 | Augmentation amplitude range |
+| `evaluation.bootstrap_samples` | 1000 | Patient resamples for confidence intervals |
+
+Contrastive fields affect `patient_history_contrastive` training only.
+CNN kernels/channels and the 256-unit forecast head are fixed in
+`src/tsa/models.py`; changing them requires code edits.
+
+Existing checkpoints include a configuration signature. Changing epochs, learning
+rate or other scientific settings in an already used experiment directory causes
+an error. Keep original settings to resume; use new paths for changed settings and
+fresh training.
+
+CLI overrides are `--root <dataset-path>` and `--device cpu|cuda|auto`.
+Change other settings in YAML; for example, `--lr` is not supported.
+
+## 10. Increase data or use the full dataset
+
+### Increase the small dataset
+
+Copy `configs/local.yaml` to `configs/medium.yaml`, retaining all copied fields.
+Edit these values:
+
+| Field | New value |
+| --- | --- |
+| `data.cache` | `data/medium` |
+| `subset.patients.train` | `1500` |
+| `subset.patients.val` | `300` |
+| `subset.patients.test` | Keep `100` |
+| `training.epochs` | `15` |
+| `training.patience` | `5` |
+| `paths.experiments` | `experiments/medium` |
+| `paths.outputs` | `outputs/medium` |
+| `paths.documents` | `Project_Documents/medium` |
+
+Keep `subset.source_cache: data/preprocessed` and `subset.seed: 42`.
+The counts select patients, not recordings. The same subset seed gives nested
+patient selections when counts increase. Keep the test cohort fixed while developing.
 
 ```powershell
 .\.venv\Scripts\python -m tsa preprocess --config configs/medium.yaml
-.\.venv\Scripts\python -m tsa smoke --config configs/medium.yaml
 .\.venv\Scripts\python -u -m tsa run-experiments --config configs/medium.yaml
-.\.venv\Scripts\python tools/status.py --config configs/medium.yaml
 ```
 
-For full data, use `configs/base.yaml`; it has no `subset` section. Existing local
-full-data checkpoints are preserved, so running that profile can resume earlier
-work. Use new experiment/output/document paths when you want a fresh full-data run.
+Changing the cohort requires preprocessing: selected records and training
+normalization change. Train new models from fresh weights.
 
-## 10. Resume and configuration changes
+### Run the full dataset
 
-Press Ctrl+C to stop, then rerun the identical training command. Resume starts from
-the last completed epoch. Work partway through an interrupted epoch is repeated.
-`last.pt` includes weights, optimizer state, random-generator states and history.
-`best.pt` contains the validation-selected weights. Completed runs are skipped.
-
-Scientific settings are part of the checkpoint signature, including epoch count,
-learning rate and seeds. Increasing `epochs` in an already used configuration is
-not supported as a same-directory resume. Use a new experiment directory and train
-fresh for a changed configuration. Device, thread count, worker count and storage
-paths are excluded from the scientific signature for portability; numerical results
-can still vary across hardware/software.
-
-Only one preparation/training writer is allowed at a time. If the pipeline reports
-another active job, inspect status and the running process before starting another.
-An idle `.pipeline.lock` file can remain after completion; its existence alone does
-not mean a job is running.
-
-## 11. Where results are saved
-
-For `lstm` + `patient_history` with the pilot configuration:
-
-```text
-data/pilot/
-  X_*.npy, y_*.npy, static_*.npy
-  metadata_*.csv, manifest.json
-
-experiments/pilot/lstm_patient_history/
-  config.json                 Settings, versions, parameter counts and device
-  feature_manifest.json       Features and preprocessing provenance
-  last.pt                     Resumable state
-  best.pt                     Selected weights
-  history.csv                 Epoch losses and durations
-  test_metrics.json           Overall metrics and training summary
-  predictions.npz             Forecasts, targets and record/patient IDs
-  per_record_metrics.csv      Record-level errors and subgroup metadata
-
-outputs/pilot/
-  model_comparison.csv, model_comparison.png
-  paired_patient_bootstrap.csv
-  metadata_distributions.png
-  lstm_patient_history/
-    learning_curves.png
-    per_lead_metrics.csv, per_lead_errors.png
-    subgroup_metrics.csv, subgroup_errors.png
-    horizon_metrics.csv, horizon_error.png
-    forecast_lowest_id.png
-    forecast_median_error.png
-    forecast_worst_error.png
-
-Project_Documents/pilot/
-  ASSIGNMENT_REPORT.md
-  PRESENTATION_NOTES.md
-  TRAINING_STATUS.md          Written by tools/status.py
-```
-
-MAE and RMSE are in mV; MSE is in mV squared. Validation/training loss curves use
-normalized units, so their numerical values are not directly comparable with test
-voltage MSE. Lower error is better. R² can be negative. Patient-macro MAE gives each
-patient equal weight. Bootstrap differences are B minus A; negative favors B.
-
-The current pilot has all eight neural runs and two baselines, with five epochs
-per neural run. Persistence has lower MAE than the neural models in this pilot.
-Treat these as preliminary findings; the short observed window, sparse prior
-history, small cohort and one seed limit conclusions.
-
-## 12. Colab workflow
-
-Build the transferable cache/code bundle locally:
+`configs/base.yaml` has no `subset` section. It uses the full cache from Step 4.
+For a fresh full-data experiment:
 
 ```powershell
-.\.venv\Scripts\python -m tsa bundle --config configs/pilot.yaml
+Copy-Item configs\base.yaml configs\full_local.yaml
 ```
 
-Upload `outputs/pilot/colab_bundle.zip` manually to
-`MyDrive/ptbxl_assignment/`. Open `notebooks/colab_training.ipynb`, select a GPU
-runtime and run the cells in order. The notebook derives its configuration from
-the pilot and checks GPU availability. Arrays run from Colab local disk; training
-artifacts persist under `MyDrive/ptbxl_assignment/pilot/`.
+In the copied config, replace `paths` with:
 
-The bundle includes the selected processed cache and code. It excludes the PDF,
-raw data and model checkpoints, and removes the private manuscript comparison from
-the bundled reporting module. No upload occurs when the bundle command runs.
-Keep CPU and GPU run artifacts in separate experiment directories when comparing
-fresh runs, then generate the report using the matching configuration.
+```yaml
+paths:
+  experiments: experiments/full_local
+  outputs: outputs/full_local
+  documents: Project_Documents/full_local
+```
+
+Retain the other copied sections, correct `data.root` if necessary, then run:
+
+```powershell
+.\.venv\Scripts\python -u -m tsa run-experiments --config configs/full_local.yaml
+```
+
+To deliberately resume the earlier stopped full-data work instead, use
+`--config configs/base.yaml` with its original settings and paths.
+
+### Change the ECG window
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `data.sampling_rate` | 500 | Samples per second; supports 100 or 500 |
+| `data.history` | 300 | Observed samples |
+| `data.horizon` | 150 | Future samples |
+| `data.start` | 0 | Starting sample within the ten-second record |
+
+Window/sampling changes require a new matching full cache, a new subset cache if
+used, and new experiment paths. The windows must fit:
+`start + history + horizon <= 10 * sampling_rate`.
+Keep the agreed 500 Hz / 300-to-150 protocol for the current assignment comparison.
+
+## 11. Find the files for a model
+
+For `lstm` + `patient_history` under `configs/local.yaml`:
+
+```text
+experiments/local/lstm_patient_history/
+  config.json              Settings, software versions, device, parameter counts
+  feature_manifest.json    Feature order and preprocessing information
+  history.csv              Train/validation losses for each epoch
+  best.pt                  Validation-selected weights
+  last.pt                  Resume state: weights, optimizer and random states
+  test_metrics.json        Test metrics, best epoch and validation MSE
+  predictions.npz          Forecasts, targets and ECG/patient IDs
+  per_record_metrics.csv   Errors per test ECG
+
+outputs/local/lstm_patient_history/
+  learning_curves.png
+  per_lead_metrics.csv, per_lead_errors.png
+  subgroup_metrics.csv, subgroup_errors.png
+  horizon_metrics.csv, horizon_error.png
+  forecast_lowest_id.png
+  forecast_median_error.png
+  forecast_worst_error.png
+```
+
+Inspect an existing selected model without training:
+
+```powershell
+.\.venv\Scripts\python -m tsa evaluate --config configs/local.yaml --model lstm --variant patient_history
+```
+
+This returns existing test metrics if present; otherwise, it evaluates the saved
+best checkpoint. It requires locally available weights.
+
+## 12. Which script does what?
+
+| File | Responsibility | Command |
+| --- | --- | --- |
+| `src/tsa/__main__.py` | CLI routing and writer lock | `python -m tsa ...` |
+| `src/tsa/config.py` | YAML, feature definitions, protocol signatures | Used automatically |
+| `src/tsa/data.py` | Audit, static features, normalization, caches and DataLoaders | `audit`, `preprocess` |
+| `src/tsa/models.py` | LSTM, CNN-LSTM, static fusion, augmentations and contrastive loss | Used by training |
+| `src/tsa/training.py` | Optimization, checkpoints, resume, inference and baselines | `smoke`, `train`, `evaluate`, `baselines`, `benchmark`, `run-experiments` |
+| `src/tsa/evaluation.py` | Metrics, plots, comparisons and confidence intervals | Used after training; `compare` |
+| `src/tsa/reporting.py` | Report, presentation notes and Colab ZIP | `report`, `bundle` |
+| `tests/test_pipeline.py` | Automated integrity/model/metric/resume tests | `python -m pytest -q` |
+| `tools/status.py` | Prints progress and writes its Markdown document | `python tools/status.py --config ...` |
+| `tools/make_notebooks.py` | Recreates both notebooks; overwrites their contents | Optional developer tool |
+| `notebooks/assignment_walkthrough.ipynb` | Interactive data/model/results explanation | Open in VS Code/Jupyter |
+| `notebooks/colab_training.ipynb` | GPU training with the same package | Optional; see README's Colab instructions |
+| `.github/workflows/ci.yml` | Tests and lint on pushes/PRs | Automatic on GitHub; does not train models |
+
+The optional timing command is
+`python -m tsa benchmark --config configs/local.yaml`.
+It estimates training time from short passes, excluding validation/plotting
+overhead. It does not save model weights or evaluate test performance.
+
+The `report` command reads existing results. It does not train missing models or
+recreate all per-model plots, and it also refreshes the root `PRESENTATION_NOTES.md`.
+
+Read the [completed small-data report](pilot/ASSIGNMENT_REPORT.md) and
+[presentation notes](pilot/PRESENTATION_NOTES.md) for the existing measured results.
 
 ## 13. Common problems
 
-| Message or symptom | Action |
+| Problem | Action |
 | --- | --- |
-| `No module named tsa` | Use `.venv` Python and install `-r requirements.txt` from the root |
-| Metadata or WFDB file not found | Check `data.root`, folder layout and `filename_hr` paths |
-| Cache manifest not found | Prepare the matching full cache, then the pilot cache |
-| Cache protocol mismatch | Use a matching config/cache; rebuild under a new cache path for changed geometry/cohort |
-| Cached file or metadata changed | Verify the intended source and rerun preprocessing; use fresh run directories for the rebuilt cache |
-| Configuration changed for run | Restore the original YAML to resume, or use a new experiments directory for fresh training |
-| `SKIP completed` | Saved results already exist; use a new experiment path for a fresh run |
-| No selected checkpoint | Train that model/variant first; a GitHub clone does not include weights |
-| CUDA unavailable or out of memory | Select CPU, or use CUDA-enabled PyTorch/compatible GPU; reduce batch size in a fresh experiment |
-| Another job active | Inspect existing work and wait for it to finish; do not launch duplicate writers |
-| Missing report figures after cloning | Pilot CSV/PNG figures are tracked; new-profile figures require evaluating its models locally |
+| `No module named tsa` | Install `requirements.txt` with the same `.venv` Python |
+| Missing CSV/waveform | Check `data.root` and the Step 2 folder layout |
+| Missing manifest | Prepare full cache, then small cache as in Step 4 |
+| Cache mismatch/modified cache | Check settings; rebuild the matching cache and use fresh experiment paths |
+| `SKIP completed` | Use Step 5 to create a fresh configuration with new output paths |
+| Configuration changed | Restore original settings to resume, or train fresh under new paths |
+| Another job active | Wait for the writer; inspect `tools/status.py` |
+| CUDA unavailable | Use `--device cpu` |
+| CUDA out of memory | Reduce batch size in a fresh experiment configuration |
+| No selected checkpoint | Train that model/variant first; GitHub does not contain weights |
 
-## 14. Short command checklist
-
-For a fresh setup: install -> tests -> audit full raw data -> preprocess full ->
-preprocess pilot -> smoke -> run-experiments -> inspect report/status.
-
-With valid local caches and completed pilot results, start with:
-
-```powershell
-.\.venv\Scripts\python tools/status.py --config configs/pilot.yaml
-.\.venv\Scripts\python -m tsa compare --config configs/pilot.yaml
-```
-
-Read the scientific findings in [the pilot assignment report](pilot/ASSIGNMENT_REPORT.md)
-and use [the presentation notes](pilot/PRESENTATION_NOTES.md) to explain CNNs, LSTM
-gates, training and the measured comparisons in class.
+The physical `.pipeline.lock` file can remain while idle. Its presence alone does
+not mean training is running. Keep the computer awake during long local training.

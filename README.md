@@ -2,9 +2,9 @@
 
 **New to the project?** Start with the
 [Configuration and Run Guide](Project_Documents/CONFIGURATION_AND_RUN_GUIDE.md).
-It explains every script, all YAML settings, installation, data preparation, testing,
-training, resuming runs, output locations, Colab, and troubleshooting, with commands
-in execution order.
+Follow its local steps in order: install, configure the data location, test, prepare
+data, train, and compare results. It explains why the small-data pilot exists and
+shows how to run different models, change parameters, and move to the full dataset.
 
 Forecast all 12 PTB-XL ECG leads at **500 Hz**, using **300 observed samples
 (0.6 s)** to predict **150 future samples (0.3 s)**. Static conditioning uses
