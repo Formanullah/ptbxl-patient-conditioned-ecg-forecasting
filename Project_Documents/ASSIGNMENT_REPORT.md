@@ -1,6 +1,16 @@
 # Contrastive Patient-Stratified ECG Forecasts
 
-INCOMPLETE: remaining runs: cnn_lstm_demographics, cnn_lstm_ecg_only, cnn_lstm_patient_history, cnn_lstm_patient_history_contrastive, lstm_demographics, lstm_ecg_only, lstm_patient_history, lstm_patient_history_contrastive
+All eight pilot neural runs and both baselines are complete.
+
+**Small-data pilot: exploratory results, not the full PTB-XL benchmark.** Whole patients were sampled uniformly within the official folds using seed 42. All available records of each selected patient were kept. Age and waveform scalers were refitted on selected training data only. Physical voltages were recovered from the full cache by inverse transformation before refitting (float32 rounding is possible). Small cohorts and short training budgets limit conclusions and literature comparisons.
+
+## Active cohort
+
+| split | records | patients | with_prior_history |
+| --- | --- | --- | --- |
+| train | 515 | 450 | 65 |
+| val | 108 | 100 | 8 |
+| test | 116 | 100 | 16 |
 
 ## Research question and interpretation
 
@@ -17,7 +27,7 @@ No clinical false-alarm reduction or diagnostic accuracy is established by these
 PTB-XL v1.0.3: 21,799 ECGs, 18,869 patients, twelve leads. The default experiment
 uses records500 at 500 Hz: samples 0:300 (0.6 s) predict 300:450 (0.3 s).
 Each record contributes one fixed window. Official patient-isolated folds 1-8/9/10
-yield 17,418/2,183/2,198 records and 15,023/1,942/1,904 patients.
+yield 17,418/2,183/2,198 records in the full dataset and 15,023/1,942/1,904 patients.
 Waveforms retain physical mV units at ingestion. No additional filtering or resampling
 is applied. Standardization fits per-lead population mean/std on training INPUTS only;
 both inputs and targets use that transform. Predictions are inverted to mV for metrics.
@@ -28,8 +38,8 @@ flags; sex follows PTB-XL's male=0/female=1 coding with unknown=0.5 plus its fla
 Diagnostic SCP keys map to NORM, MI, STTC, CD and HYP. Likelihood zero means unknown
 confidence, not absence. Historical indicators are the union of labels from strictly
 earlier timestamps of the same patient; current/same-time labels are excluded.
-Missing history is a separate flag. Available history covers 2,929 records (13.4%);
-only 293 test records have it. Historical labels are a proxy, not a verified clinical
+Missing history is a separate flag. In the full dataset, available history covers 2,929 records (13.4%);
+293 full-test records have it. Historical labels are a proxy, not a verified clinical
 problem list. Current-record labels are used only for subgroup reporting.
 
 ## Models and hyperparameter justification
@@ -51,7 +61,7 @@ in timing precision. These choices are plausible starting values, not tuned opti
 
 AdamW learning rate 0.001 is a common initial scale; weight decay 0.0001 and dropout
 0.2 regularize. Batch 64 balances memory and minibatch statistics. Clip gradient norm
-at 1.0 to limit exploding gradients. Maximum 25 epochs, patience 5, and minimum
+at 1.0 to limit exploding gradients. Maximum 5 epochs, patience 3, and minimum
 validation forecast MSE determine the checkpoint. No test-based tuning is performed.
 All eight runs use seed 42, the same splits, cache, optimizer settings and output window.
 
@@ -84,27 +94,56 @@ on this fitted seed and are descriptive, without multiple-comparison correction.
 
 Errors are in original mV (MSE in mV^2).
 
-![Dataset audit](../outputs/metadata_distributions.png)
+![Dataset audit](../outputs/pilot/metadata_distributions.png)
 
 | run | mae | rmse | mse | r2 | pearson_mean | patient_macro_mae | n_test_records | n_test_patients | epochs | best_epoch | training_seconds |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| persistence | 0.132093 | 0.290380 | 0.084321 | -0.159707 | 0.408972 | 0.131781 | 2198 | 1904 | 0 | undefined | 0 |
-| repeat_window | 0.155507 | 0.309010 | 0.095487 | -0.313286 | 0.354238 | 0.154881 | 2198 | 1904 | 0 | undefined | 0 |
+| cnn_lstm_demographics | 0.155650 | 0.434724 | 0.188985 | 0.012654 | 0.202422 | 0.152838 | 116 | 100 | 5 | 5.000000 | 9.027768 |
+| cnn_lstm_ecg_only | 0.154296 | 0.433948 | 0.188311 | 0.016176 | 0.200333 | 0.151576 | 116 | 100 | 5 | 4.000000 | 9.075329 |
+| cnn_lstm_patient_history | 0.154251 | 0.433902 | 0.188271 | 0.016385 | 0.202367 | 0.151215 | 116 | 100 | 5 | 5.000000 | 8.763636 |
+| cnn_lstm_patient_history_contrastive | 0.155719 | 0.435588 | 0.189737 | 0.008725 | 0.178517 | 0.152772 | 116 | 100 | 5 | 5.000000 | 28.105523 |
+| lstm_demographics | 0.151759 | 0.431238 | 0.185966 | 0.028427 | 0.273694 | 0.148413 | 116 | 100 | 5 | 5.000000 | 18.884125 |
+| lstm_ecg_only | 0.151706 | 0.430543 | 0.185368 | 0.031552 | 0.282981 | 0.148435 | 116 | 100 | 5 | 4.000000 | 15.137457 |
+| lstm_patient_history | 0.150113 | 0.430582 | 0.185401 | 0.031379 | 0.288765 | 0.146684 | 116 | 100 | 5 | 5.000000 | 15.659052 |
+| lstm_patient_history_contrastive | 0.151782 | 0.431546 | 0.186232 | 0.027037 | 0.284187 | 0.148438 | 116 | 100 | 5 | 4.000000 | 47.396776 |
+| persistence | 0.141546 | 0.358149 | 0.128271 | 0.329855 | 0.442172 | 0.129724 | 116 | 100 | 0 | undefined | 0.000000 |
+| repeat_window | 0.168642 | 0.336686 | 0.113358 | 0.407766 | 0.364880 | 0.161466 | 116 | 100 | 0 | undefined | 0.000000 |
 
 ## Observed comparisons
 
-Lowest observed record-weighted test MAE: **persistence**, 0.132093 mV.
+Lowest observed record-weighted test MAE: **persistence**, 0.141546 mV.
 
 This is descriptive; test results were not used to tune or choose checkpoints.
 
+Lowest observed neural-model MAE: **lstm_patient_history**, 0.150113 mV.
+
+Its MAE is higher than persistence (0.141546 mV). This is a descriptive comparison under the configured data/training budget, not evidence of a general clinical advantage.
+
+The pilot uses only five epochs and a small cohort. Do not infer architecture superiority or conditioning benefit from this run alone. Increase training patients and the predeclared epoch budget, preserving patient isolation and validation-based checkpoint selection.
+
+- demographics: lstm_demographics minus lstm_ecg_only: patient-macro MAE delta -0.000022 mV, 95% interval [-0.001178, +0.001184].
+
+- history: lstm_patient_history minus lstm_demographics: patient-macro MAE delta -0.001729 mV, 95% interval [-0.003275, -0.000242].
+
+- contrastive: lstm_patient_history_contrastive minus lstm_patient_history: patient-macro MAE delta +0.001754 mV, 95% interval [+0.000283, +0.003351].
+
+- demographics: cnn_lstm_demographics minus cnn_lstm_ecg_only: patient-macro MAE delta +0.001261 mV, 95% interval [-0.000025, +0.002541].
+
+- history: cnn_lstm_patient_history minus cnn_lstm_demographics: patient-macro MAE delta -0.001623 mV, 95% interval [-0.003720, +0.000269].
+
+- contrastive: cnn_lstm_patient_history_contrastive minus cnn_lstm_patient_history: patient-macro MAE delta +0.001557 mV, 95% interval [-0.000871, +0.003845].
+
+- architecture: cnn_lstm_ecg_only minus lstm_ecg_only: patient-macro MAE delta +0.003141 mV, 95% interval [+0.001435, +0.005009].
+
+- architecture: cnn_lstm_demographics minus lstm_demographics: patient-macro MAE delta +0.004425 mV, 95% interval [+0.002416, +0.006544].
+
+- architecture: cnn_lstm_patient_history minus lstm_patient_history: patient-macro MAE delta +0.004531 mV, 95% interval [+0.002810, +0.006488].
+
+- architecture: cnn_lstm_patient_history_contrastive minus lstm_patient_history_contrastive: patient-macro MAE delta +0.004334 mV, 95% interval [+0.002060, +0.006693].
+
 ## Local timing benchmark
 
-| architecture | contrastive | records | seconds | estimated_train_epoch_seconds |
-| --- | --- | --- | --- | --- |
-| lstm | False | 256 | 1.329423 | 90.452674 |
-| lstm | True | 256 | 4.408846 | 299.973762 |
-| cnn_lstm | False | 256 | 0.794673 | 54.068779 |
-| cnn_lstm | True | 256 | 2.515597 | 171.158848 |
+Benchmark not yet run.
 
 Benchmark estimates exclude validation, checkpoint and plotting overhead; measured run times are in the results table.
 
@@ -162,16 +201,80 @@ false-alarm claims follow from these experiments.
 
 ## Figures and provenance
 
+### cnn_lstm_demographics
+
+![Representative forecast](../outputs/pilot/cnn_lstm_demographics/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/cnn_lstm_demographics/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/cnn_lstm_demographics/learning_curves.png)
+
+### cnn_lstm_ecg_only
+
+![Representative forecast](../outputs/pilot/cnn_lstm_ecg_only/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/cnn_lstm_ecg_only/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/cnn_lstm_ecg_only/learning_curves.png)
+
+### cnn_lstm_patient_history
+
+![Representative forecast](../outputs/pilot/cnn_lstm_patient_history/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/cnn_lstm_patient_history/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/cnn_lstm_patient_history/learning_curves.png)
+
+### cnn_lstm_patient_history_contrastive
+
+![Representative forecast](../outputs/pilot/cnn_lstm_patient_history_contrastive/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/cnn_lstm_patient_history_contrastive/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/cnn_lstm_patient_history_contrastive/learning_curves.png)
+
+### lstm_demographics
+
+![Representative forecast](../outputs/pilot/lstm_demographics/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/lstm_demographics/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/lstm_demographics/learning_curves.png)
+
+### lstm_ecg_only
+
+![Representative forecast](../outputs/pilot/lstm_ecg_only/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/lstm_ecg_only/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/lstm_ecg_only/learning_curves.png)
+
+### lstm_patient_history
+
+![Representative forecast](../outputs/pilot/lstm_patient_history/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/lstm_patient_history/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/lstm_patient_history/learning_curves.png)
+
+### lstm_patient_history_contrastive
+
+![Representative forecast](../outputs/pilot/lstm_patient_history_contrastive/forecast_lowest_id.png)
+
+![Per-lead errors](../outputs/pilot/lstm_patient_history_contrastive/per_lead_errors.png)
+
+![Learning curves](../outputs/pilot/lstm_patient_history_contrastive/learning_curves.png)
+
 ### persistence
 
-![Representative forecast](../outputs/persistence/forecast_lowest_id.png)
+![Representative forecast](../outputs/pilot/persistence/forecast_lowest_id.png)
 
-![Per-lead errors](../outputs/persistence/per_lead_errors.png)
+![Per-lead errors](../outputs/pilot/persistence/per_lead_errors.png)
 
 ### repeat_window
 
-![Representative forecast](../outputs/repeat_window/forecast_lowest_id.png)
+![Representative forecast](../outputs/pilot/repeat_window/forecast_lowest_id.png)
 
-![Per-lead errors](../outputs/repeat_window/per_lead_errors.png)
+![Per-lead errors](../outputs/pilot/repeat_window/per_lead_errors.png)
 
-Configs, feature manifests, histories, checkpoints, per-record errors and predictions are stored under experiments/<run>. Subgroup/horizon CSVs and remaining figures are under outputs/<run>. Re-run `python -m tsa report` to regenerate this document.
+Configs, feature manifests, histories, checkpoints, per-record errors and predictions are stored under experiments/<run>. Subgroup/horizon CSVs and remaining figures are under the configured outputs directory. Re-run `python -m tsa report --config configs/pilot.yaml` to regenerate.

@@ -50,8 +50,8 @@ lines += [
     "Rerunning this command resumes last completed epochs and skips measured completed runs.",
     f"Regenerate with `python tools/status.py --config {args.config}`.",
 ]
-Path(cfg["paths"]["documents"]).mkdir(parents=True, exist_ok=True)
-Path(cfg["paths"]["documents"], "TRAINING_STATUS.md").write_text(
+Path(cfg["paths"]["experiments"]).mkdir(parents=True, exist_ok=True)
+Path(cfg["paths"]["experiments"], "TRAINING_STATUS.md").write_text(
     "\n".join(lines) + "\n", encoding="utf-8"
 )
 print("\n".join(lines))

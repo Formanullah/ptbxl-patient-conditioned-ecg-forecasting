@@ -3,6 +3,11 @@
 Follow Steps 1-8 in order. Section 9 shows how to train with different parameters.
 Section 10 explains how to increase the dataset or run the full assignment.
 
+All current reading material is together in this folder: this guide explains how
+to run the project, [the assignment report](ASSIGNMENT_REPORT.md) explains the
+measured results, and [the presentation notes](PRESENTATION_NOTES.md) explain the
+architecture for class. Start from the repository README to choose a document.
+
 ## Why do we use “pilot”?
 
 **Pilot means a small preliminary experiment.** It is the name of a configuration,
@@ -229,6 +234,9 @@ Run one training command at a time. To inspect progress from another window:
 ```powershell
 .\.venv\Scripts\python tools/status.py --config configs/local.yaml
 ```
+
+This prints progress and saves `experiments/local/TRAINING_STATUS.md` beside the
+training logs. The main reading documents stay in `Project_Documents/`.
 
 Press Ctrl+C to stop. Rerun the identical command to resume from the last completed
 epoch. Finished runs are skipped.
@@ -512,10 +520,12 @@ It estimates training time from short passes, excluding validation/plotting
 overhead. It does not save model weights or evaluate test performance.
 
 The `report` command reads existing results. It does not train missing models or
-recreate all per-model plots, and it also refreshes the root `PRESENTATION_NOTES.md`.
+recreate all per-model plots. It writes the report and presentation notes only to
+the configured documents directory. Training progress is stored beside experiment
+logs, not among the reading documents.
 
-Read the [completed small-data report](pilot/ASSIGNMENT_REPORT.md) and
-[presentation notes](pilot/PRESENTATION_NOTES.md) for the existing measured results.
+Read the [completed small-data report](ASSIGNMENT_REPORT.md) and
+[presentation notes](PRESENTATION_NOTES.md) for the existing measured results.
 
 ## 13. Common problems
 

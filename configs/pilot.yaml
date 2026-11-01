@@ -40,4 +40,4 @@ evaluation:
 paths:
   experiments: experiments/pilot
   outputs: outputs/pilot
-  documents: Project_Documents/pilot
+  documents: Project_Documents

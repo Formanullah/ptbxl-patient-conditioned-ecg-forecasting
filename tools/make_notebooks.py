@@ -24,9 +24,6 @@ def save(name, cells):
         source = "".join(cell["source"])
         source = source.replace("configs/base.yaml", "configs/pilot.yaml")
         source = source.replace("data/preprocessed", "data/pilot")
-        source = source.replace(
-            "Project_Documents/ASSIGNMENT_REPORT.md", "Project_Documents/pilot/ASSIGNMENT_REPORT.md"
-        )
         source = source.replace("outputs/", "outputs/pilot/")
         source = source.replace(
             "drive_dir / 'outputs/pilot/model_comparison.csv'",
@@ -99,7 +96,7 @@ save(
             "and contrastive versus history-only runs. Negative paired B-A intervals favor B. "
             "Compare architectures under each condition. Inspect sharp peaks and timing "
             "as well as mean error. Read `Project_Documents/ASSIGNMENT_REPORT.md` "
-            "and `PRESENTATION_NOTES.md` for equations and literature caveats."
+            "and `Project_Documents/PRESENTATION_NOTES.md` for equations and literature caveats."
         ),
     ],
 )

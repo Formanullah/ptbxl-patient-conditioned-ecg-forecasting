@@ -32,4 +32,4 @@ evaluation:
 paths:
   experiments: experiments
   outputs: outputs
-  documents: Project_Documents
+  documents: Project_Documents/full_data

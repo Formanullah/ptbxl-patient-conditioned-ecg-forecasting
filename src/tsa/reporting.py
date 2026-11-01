@@ -186,7 +186,8 @@ def presentation_notes(table):
         """# Class presentation and speaker notes
 
 The results table contains completed full-data runs only. Check the assignment report
-and TRAINING_STATUS.md for unfinished models before presenting final comparisons.
+and run tools/status.py with the matching configuration to check unfinished models
+before presenting final comparisons. Progress files are stored with experiment logs.
 
 1. **Question and task:** forecast twelve cardiac voltage streams from 0.6 s observed to
    the next 0.3 s. Explain why patient context might help; improvement is an empirical question.
@@ -378,7 +379,6 @@ def report(cfg):
             "# Class presentation and speaker notes\n\n**Small-data pilot: preliminary results; see the active-cohort table in the assignment report.**",
         )
     (docs / "PRESENTATION_NOTES.md").write_text(notes, encoding="utf-8")
-    Path("PRESENTATION_NOTES.md").write_text(notes, encoding="utf-8")
     print(status, flush=True)
     print(f"Report: {docs / 'ASSIGNMENT_REPORT.md'}", flush=True)
     return table

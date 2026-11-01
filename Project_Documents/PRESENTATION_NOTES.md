@@ -1,7 +1,10 @@
 # Class presentation and speaker notes
 
-The results table contains completed full-data runs only. Check the assignment report
-and TRAINING_STATUS.md for unfinished models before presenting final comparisons.
+**Small-data pilot: preliminary results; see the active-cohort table in the assignment report.**
+
+The results table contains completed runs for the configured cohort only. Check the assignment report
+and run tools/status.py with the matching configuration to check unfinished models
+before presenting final comparisons. Progress files are stored with experiment logs.
 
 1. **Question and task:** forecast twelve cardiac voltage streams from 0.6 s observed to
    the next 0.3 s. Explain why patient context might help; improvement is an empirical question.
@@ -32,8 +35,8 @@ and TRAINING_STATUS.md for unfinished models before presenting final comparisons
     weight decay 0.0001, batch 64, dropout 0.2. Show zero_grad -> forward -> loss ->
     backward -> clip -> optimizer.step. Validation uses forecast MSE without augmentation.
 11. **Experiment design:** two architectures x four variants = eight runs, same seed/folds,
-    plus persistence/repeated-window baselines. Best validation epoch, patience five,
-    maximum 25. Explain why comparing total contrastive loss with plain MSE is misleading.
+    plus persistence/repeated-window baselines. Best validation epoch, patience 3,
+    maximum 5. Explain why comparing total contrastive loss with plain MSE is misleading.
 12. **Results:** insert the table below, learning curves and paired-patient intervals.
     Explain mV/mV^2, MAE/RMSE, R2 and correlation. Negative R2 is possible and meaningful.
 13. **Forecasts:** show lowest-ID, median-error and worst-error twelve-lead plots. The
@@ -64,5 +67,13 @@ flowchart LR
 
 | run | mae | rmse | patient_macro_mae | best_epoch |
 | --- | --- | --- | --- | --- |
-| persistence | 0.132093 | 0.290380 | 0.131781 | undefined |
-| repeat_window | 0.155507 | 0.309010 | 0.154881 | undefined |
+| cnn_lstm_demographics | 0.155650 | 0.434724 | 0.152838 | 5.000000 |
+| cnn_lstm_ecg_only | 0.154296 | 0.433948 | 0.151576 | 4.000000 |
+| cnn_lstm_patient_history | 0.154251 | 0.433902 | 0.151215 | 5.000000 |
+| cnn_lstm_patient_history_contrastive | 0.155719 | 0.435588 | 0.152772 | 5.000000 |
+| lstm_demographics | 0.151759 | 0.431238 | 0.148413 | 5.000000 |
+| lstm_ecg_only | 0.151706 | 0.430543 | 0.148435 | 4.000000 |
+| lstm_patient_history | 0.150113 | 0.430582 | 0.146684 | 5.000000 |
+| lstm_patient_history_contrastive | 0.151782 | 0.431546 | 0.148438 | 4.000000 |
+| persistence | 0.141546 | 0.358149 | 0.129724 | undefined |
+| repeat_window | 0.168642 | 0.336686 | 0.161466 | undefined |
