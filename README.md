@@ -1,106 +1,165 @@
-# Contrastive Patient-Stratified ECG Forecasts
+# Patient-conditioned ECG forecasting
 
-Predict the next **150 samples (0.3 seconds)** of all 12 PTB-XL ECG leads from
-**300 observed samples (0.6 seconds)** at 500 Hz. Compare LSTM and CNN-LSTM with
-age, sex, strictly earlier diagnostic superclasses, and optional contrastive learning.
+Compare LSTM and CNN-LSTM forecasts of 12-lead PTB-XL ECGs using age, sex and earlier
+diagnostic history. Input: 300 samples (0.6 seconds). Forecast: 150 samples
+(0.3 seconds), at 500 Hz.
 
-## Start here
+Run each step yourself. Settings live in YAML files; each script performs one
+chosen operation.
+All project scripts and model code are directly in `src/`. Each stage script
+contains its implementation; there are no duplicate root launchers or nested package.
 
-All current project documents are together in **`Project_Documents/`**.
-Choose one based on what you need; you do not need to read duplicate versions.
-
-| Order | Document | Use it for |
-| --- | --- | --- |
-| 1 | [Configuration and Run Guide](Project_Documents/CONFIGURATION_AND_RUN_GUIDE.md) | Run locally step by step, configure data/models, change parameters, and compare experiments |
-| 2 | [Assignment Report](Project_Documents/ASSIGNMENT_REPORT.md) | Understand preprocessing, methods, measured results, figures, and literature comparison |
-| 3 | [Presentation Notes](Project_Documents/PRESENTATION_NOTES.md) | Explain CNN operations, LSTM gates, tensor shapes, training and findings in class |
-
-**The report and notes describe the completed small-data experiment.**
-“Pilot” means that smaller preliminary run, created to reduce CPU training time.
-It uses 450 training, 100 validation and 100 test patients, with at most five epochs.
-Full-data training uses the same pipeline with `configs/base.yaml` and up to 25 epochs.
-The guide explains how to choose either configuration.
-
-## Current results
-
-All eight small-data neural runs and both baselines are complete.
-The best neural MAE was **0.150113 mV** (LSTM with patient history), while persistence
-achieved **0.141546 mV**. These preliminary results do not establish a benefit from
-conditioning or contrastive learning. The short input window and single seed limit
-conclusions; clinical false-alarm reduction remains a motivation requiring validation.
-
-Open the [comparison table](outputs/pilot/model_comparison.csv) or
-[comparison chart](outputs/pilot/model_comparison.png) for the measured results.
-
-## Project folders
+## Project structure
 
 ```text
-src/tsa/             Reusable data, models, training, evaluation and reporting package
-configs/             pilot.yaml = small data; base.yaml = full data
-tests/               Automated data-integrity, model, loss, metric and resume checks
-tools/               Progress inspection and notebook generation
-notebooks/           Optional local walkthrough and Colab GPU workflow
-Project_Documents/   The three current documents linked above
-PTB-XL/              Raw data; kept local
-data/                Prepared caches; kept local
-experiments/         Checkpoints, logs, predictions and training status; kept local
-outputs/             Figures/CSV tables; pilot CSV/PNG results are tracked
+ptbxl_assignment/
+  src/
+    preprocessing.py    Data preparation and DataLoaders
+    train.py            Training implementation
+    evaluate.py         Evaluation, metrics and plots
+    compare.py          Model comparisons
+    report.py           Report generation
+    models.py           LSTM and CNN-LSTM definitions
+    config.py           YAML settings and common constants
+    run_tests.py        Software test runner
+    status.py           Inspect saved progress
+  configs/              Edit local.yaml
+  tests/                Test cases
+  notebooks/            Local walkthrough and Colab notebook
+  Project_Documents/    Run guide, report and presentation notes
+  PTB-XL/               Raw dataset
+  data/                 Prepared arrays
+  experiments/          Model checkpoints, logs and predictions
+  outputs/              Figures and comparison tables
+  .cache/               Disposable test/tool files; ignored by Git
 ```
 
-Future experiment configurations should use their own output directories.
-The current small-data documents are in `Project_Documents/`; a future full-data
-report goes to `Project_Documents/full_data/` so it cannot overwrite them.
-There are no old incomplete reports mixed into the current reading material.
+Run commands from the project root using `python src/<script>.py`. A model's files
+go inside the configured experiment directory. Temporary tool files stay in
+`.cache/`. `.venv/` holds your Python environment and `.github/` holds the manual
+GitHub check definition.
 
-## Commands at a glance
-
-Run PowerShell from the project root. Follow the guide for installation and data
-preparation before training. A fresh clone does not include raw data, caches or
-model weights.
+## 1. Activate your environment
 
 ```powershell
-# Verify the code
-.\.venv\Scripts\python -m pytest -q
-
-# See available operations
-.\.venv\Scripts\python -m tsa --help
-
-# Inspect existing small-data progress; writes experiments/pilot/TRAINING_STATUS.md
-.\.venv\Scripts\python tools/status.py --config configs/pilot.yaml
-
-# Read existing comparisons, or regenerate the current report
-.\.venv\Scripts\python -m tsa compare --config configs/pilot.yaml
-.\.venv\Scripts\python -m tsa report --config configs/pilot.yaml
+cd D:\Study\HIS_Project\Project\ptbxl_assignment
+.\.venv\Scripts\Activate.ps1
 ```
 
-For fresh training, parameter changes, resume instructions and a larger cohort,
-follow the [run guide](Project_Documents/CONFIGURATION_AND_RUN_GUIDE.md).
-Completed runs are skipped automatically.
-
-## Optional Colab GPU workflow
+For a fresh setup, create the environment first, then activate and install:
 
 ```powershell
-.\.venv\Scripts\python -m tsa bundle --config configs/pilot.yaml
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
 ```
 
-Put `outputs/pilot/colab_bundle.zip` in Google Drive at
-`MyDrive/ptbxl_assignment/`, open `notebooks/colab_training.ipynb`, choose a GPU
-runtime, and follow its cells. Results persist under
-`MyDrive/ptbxl_assignment/pilot/`. Keep CPU/GPU runs in separate experiment paths.
+If PowerShell blocks activation, use
+`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and retry activation.
+After activation, use `python` normally in that terminal.
 
-The bundle includes code and the prepared small-data cache. It excludes raw data,
-checkpoints, the attached PDF and the private manuscript comparison. The PDF remains
-local and is excluded from Git. Building a bundle does not upload anything.
+## 2. Choose and edit a configuration
 
-## Automated checks
+`configs/pilot.yaml` uses a small patient subset and five epochs.
+`configs/base.yaml` uses all data and up to 25 epochs.
+“Pilot” simply means the small preliminary experiment requested to reduce CPU time.
+
+**Edit `configs/local.yaml` for your work.** It is the default for the scripts and
+already uses the small-data settings with separate output paths. Set your raw
+`data.root` and review:
+
+```yaml
+paths:
+  experiments: experiments/local
+  outputs: outputs/local
+  documents: Project_Documents/local
+```
+
+Change `model.hidden`, `training.lr`, `training.batch_size` and
+`training.epochs` in the same file as needed. Use new output paths for each changed
+experiment. Keep `data.cache: data/pilot` when reusing the prepared small dataset.
+
+## 3. Prepare data
+
+Skip this step when the matching caches already exist. For a fresh setup, check
+`data.root` in both original configurations, then run:
 
 ```powershell
-.\.venv\Scripts\python -m pytest -q
-.\.venv\Scripts\python -m ruff check src tests tools
-.\.venv\Scripts\python -m ruff format --check src tests tools
+python src/preprocessing.py --audit --config configs/base.yaml
+python src/preprocessing.py --config configs/base.yaml
+python src/preprocessing.py
 ```
 
-The 18 test cases use synthetic fixtures and cover patient isolation, chronological
-history, missingness, training-only normalization, target isolation, model
-shapes/gradients, contrastive masks, metrics, cache integrity and checkpoint resume.
-GitHub Actions runs these checks when code is pushed; it does not train ECG models.
+The small-data preparation currently selects patients from the full cache, which
+must be prepared once. Preprocessing is shared by both models.
+
+## 4. Train and evaluate one model at a time
+
+```powershell
+python src/train.py --model lstm --variant patient_history
+python src/evaluate.py --model lstm --variant patient_history
+
+python src/train.py --model cnn_lstm --variant patient_history
+python src/evaluate.py --model cnn_lstm --variant patient_history
+```
+
+Training saves checkpoints and validation metrics. Evaluation saves test metrics,
+predictions and figures. Run evaluation after choosing settings using validation.
+
+To continue an interrupted run, explicitly add `--resume` to its training command.
+Starting the same saved run without `--resume` produces a message asking you to
+resume or choose fresh output paths.
+
+## 5. Compare and write the report
+
+```powershell
+python src/evaluate.py --baselines
+python src/compare.py
+python src/report.py
+```
+
+Open `outputs/local/model_comparison.csv` and
+`Project_Documents/local/ASSIGNMENT_REPORT.md`.
+Compare LSTM and CNN-LSTM with the same variant and data.
+
+## Scripts
+
+| Script | What you choose to run |
+| --- | --- |
+| `src/preprocessing.py` | Prepare arrays; `--audit` checks raw recordings |
+| `src/train.py` | Train one `--model` and `--variant`; `--resume` continues its saved state |
+| `src/evaluate.py` | Evaluate one saved model, or `--baselines` for simple forecasts |
+| `src/compare.py` | Compare already evaluated runs |
+| `src/report.py` | Generate documents from available results |
+| `src/run_tests.py` | Run automated software tests when you choose |
+| `src/status.py` | Inspect progress without training anything |
+
+Use `python src/train.py --help` for options. To use another YAML file, add
+`--config configs/your_experiment.yaml` to a command.
+Variants: `ecg_only`, `demographics`, `patient_history`,
+`patient_history_contrastive`. Repeat training and evaluation manually for the
+variants you want. There is no “run everything” command.
+
+## Tests and documentation
+
+```powershell
+python src/run_tests.py -q
+```
+
+Use `src/run_tests.py` rather than `pytest.py`, which would conflict with pytest imports.
+GitHub checks can be started manually from the repository's Actions tab.
+
+| Document | Purpose |
+| --- | --- |
+| [Run Guide](Project_Documents/CONFIGURATION_AND_RUN_GUIDE.md) | Detailed configuration, manual steps, parameter comparisons, resume and troubleshooting |
+| [Assignment Report](Project_Documents/ASSIGNMENT_REPORT.md) | Existing small-data methods, metrics, figures and literature comparison |
+| [Presentation Notes](Project_Documents/PRESENTATION_NOTES.md) | CNN/LSTM architecture and training explanation for class |
+
+The existing small-data results include eight neural runs and two baselines.
+The best neural MAE is 0.150113 mV; persistence achieves 0.141546 mV.
+These preliminary results do not establish a benefit from conditioning or
+contrastive learning. See the [results table](outputs/pilot/model_comparison.csv).
+
+Raw data, caches, checkpoints and predictions stay local. The attached paper PDF
+is excluded from Git and Colab transfers.

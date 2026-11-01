@@ -104,7 +104,7 @@ Errors are in original mV (MSE in mV^2).
 | cnn_lstm_patient_history_contrastive | 0.155719 | 0.435588 | 0.189737 | 0.008725 | 0.178517 | 0.152772 | 116 | 100 | 5 | 5.000000 | 28.105523 |
 | lstm_demographics | 0.151759 | 0.431238 | 0.185966 | 0.028427 | 0.273694 | 0.148413 | 116 | 100 | 5 | 5.000000 | 18.884125 |
 | lstm_ecg_only | 0.151706 | 0.430543 | 0.185368 | 0.031552 | 0.282981 | 0.148435 | 116 | 100 | 5 | 4.000000 | 15.137457 |
-| lstm_patient_history | 0.150113 | 0.430582 | 0.185401 | 0.031379 | 0.288765 | 0.146684 | 116 | 100 | 5 | 5.000000 | 15.659052 |
+| lstm_patient_history | 0.150113 | 0.430582 | 0.185401 | 0.031379 | 0.288765 | 0.146684 | 116 | 100 | 5 | 5.000000 | 15.547189 |
 | lstm_patient_history_contrastive | 0.151782 | 0.431546 | 0.186232 | 0.027037 | 0.284187 | 0.148438 | 116 | 100 | 5 | 4.000000 | 47.396776 |
 | persistence | 0.141546 | 0.358149 | 0.128271 | 0.329855 | 0.442172 | 0.129724 | 116 | 100 | 0 | undefined | 0.000000 |
 | repeat_window | 0.168642 | 0.336686 | 0.113358 | 0.407766 | 0.364880 | 0.161466 | 116 | 100 | 0 | undefined | 0.000000 |
@@ -277,4 +277,4 @@ false-alarm claims follow from these experiments.
 
 ![Per-lead errors](../outputs/pilot/repeat_window/per_lead_errors.png)
 
-Configs, feature manifests, histories, checkpoints, per-record errors and predictions are stored under experiments/<run>. Subgroup/horizon CSVs and remaining figures are under the configured outputs directory. Re-run `python -m tsa report --config configs/pilot.yaml` to regenerate.
+Configs, feature manifests, histories, checkpoints, per-record errors and predictions are stored under experiments/<run>. Subgroup/horizon CSVs and remaining figures are under the configured outputs directory. Re-run `python src/report.py --config configs/pilot.yaml` to regenerate.

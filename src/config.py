@@ -77,3 +77,12 @@ def write_json(path, value):
 
 def read_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def runtime(cfg):
+    import torch
+
+    torch.set_num_threads(cfg["training"]["threads"])
+    requested = cfg["training"]["device"]
+    device = ("cuda" if torch.cuda.is_available() else "cpu") if requested == "auto" else requested
+    return torch.device(device)

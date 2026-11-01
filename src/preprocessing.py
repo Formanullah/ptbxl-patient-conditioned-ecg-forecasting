@@ -1,5 +1,6 @@
 """Audited physical-unit WFDB loading and leakage-aware input construction."""
 
+import argparse
 import ast
 import copy
 from pathlib import Path
@@ -8,9 +9,20 @@ import numpy as np
 import pandas as pd
 import torch
 import wfdb
+from filelock import FileLock
 from torch.utils.data import DataLoader, Dataset
 
-from .config import CLASSES, FEATURES, LEADS, digest, file_hash, protocol, read_json, write_json
+from config import (
+    CLASSES,
+    FEATURES,
+    LEADS,
+    digest,
+    file_hash,
+    load_config,
+    protocol,
+    read_json,
+    write_json,
+)
 
 
 def metadata(root):
@@ -362,8 +374,8 @@ class ECGDataset(Dataset):
         }
 
 
-def make_loaders(cfg, variant, generator=None, limit=None):
-    datasets = {s: ECGDataset(cfg, s, variant, limit) for s in ("train", "val", "test")}
+def make_loaders(cfg, variant, generator=None, limit=None, splits=("train", "val", "test")):
+    datasets = {s: ECGDataset(cfg, s, variant, limit) for s in splits}
     tr = cfg["training"]
     return {
         s: DataLoader(
@@ -375,3 +387,23 @@ def make_loaders(cfg, variant, generator=None, limit=None):
         )
         for s, ds in datasets.items()
     }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", default="configs/local.yaml")
+    parser.add_argument("--root", help="Raw PTB-XL folder")
+    parser.add_argument(
+        "--audit", action="store_true", help="Check raw ECGs without preparing arrays"
+    )
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    if args.root:
+        config["data"]["root"] = args.root
+
+    with FileLock(".pipeline.lock", timeout=0):
+        if args.audit:
+            audit(config)
+        else:
+            preprocess(config)

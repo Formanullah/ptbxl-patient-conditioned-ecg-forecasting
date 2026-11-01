@@ -5,6 +5,7 @@
 /outputs/*
 !/outputs/pilot/
 /outputs/pilot/*.zip
+/outputs/pilot/smoke/
 __pycache__/
 *.py[cod]
 *.egg-info/

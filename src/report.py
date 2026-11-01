@@ -1,5 +1,6 @@
 """Generate measured assignment documentation and an explicit Colab allowlist bundle."""
 
+import argparse
 import os
 import re
 from pathlib import Path
@@ -7,8 +8,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pandas as pd
 
-from .config import VARIANTS, read_json
-from .evaluation import compare_runs, save_figure
+from compare import compare_runs
+from config import VARIANTS, load_config, read_json
+from evaluate import save_figure
 
 
 def metadata_figures(cfg):
@@ -186,7 +188,7 @@ def presentation_notes(table):
         """# Class presentation and speaker notes
 
 The results table contains completed full-data runs only. Check the assignment report
-and run tools/status.py with the matching configuration to check unfinished models
+and run src/status.py with the matching configuration to check unfinished models
 before presenting final comparisons. Progress files are stored with experiment logs.
 
 1. **Question and task:** forecast twelve cardiac voltage streams from 0.6 s observed to
@@ -254,7 +256,7 @@ flowchart LR
     )
 
 
-def report(cfg):
+def report(cfg, config_path=None):
     table = compare_runs(cfg)
     metadata_figures(cfg)
     root = Path(cfg["paths"]["experiments"])
@@ -366,8 +368,8 @@ def report(cfg):
             body += f"![Learning curves]({asset(run + '/learning_curves.png')})\n\n"
     body += "Configs, feature manifests, histories, checkpoints, per-record errors and predictions "
     body += "are stored under experiments/<run>. Subgroup/horizon CSVs and remaining figures "
-    config_name = "configs/pilot.yaml" if pilot else "configs/base.yaml"
-    body += f"are under the configured outputs directory. Re-run `python -m tsa report --config {config_name}` to regenerate.\n"
+    config_name = config_path or ("configs/pilot.yaml" if pilot else "configs/base.yaml")
+    body += f"are under the configured outputs directory. Re-run `python src/report.py --config {config_name}` to regenerate.\n"
     (docs / "ASSIGNMENT_REPORT.md").write_text(body, encoding="utf-8")
     notes = presentation_notes(table)
     notes = notes.replace("full-data runs", "runs for the configured cohort")
@@ -390,10 +392,10 @@ def bundle(cfg):
     destination.parent.mkdir(parents=True, exist_ok=True)
     files = [Path(name) for name in ("pyproject.toml", "requirements.txt", "README.md")]
     for folder in (
-        Path("src/tsa"),
+        Path("src"),
         Path("configs"),
         Path("notebooks"),
-        Path("tools"),
+        Path("tests"),
         Path(cfg["data"]["cache"]),
     ):
         files.extend(p for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
@@ -404,7 +406,7 @@ def bundle(cfg):
                 Path.cwd() if path.is_absolute() else Path(".")
             ):
                 continue
-            if path.as_posix().endswith("src/tsa/reporting.py"):
+            if path.as_posix().endswith("src/report.py"):
                 # The local manuscript's extracted results must not travel to Colab.
                 source = path.read_text(encoding="utf-8")
                 source = re.sub(
@@ -419,3 +421,18 @@ def bundle(cfg):
         f"Created {destination} ({destination.stat().st_size / 1e6:.1f} MB). "
         "Contains code/config/notebooks/preprocessed cache only; no PDF, raw data or checkpoints."
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", default="configs/local.yaml")
+    parser.add_argument(
+        "--bundle", action="store_true", help="Build the local code/cache ZIP for Colab"
+    )
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    if args.bundle:
+        bundle(config)
+    else:
+        report(config, config_path=args.config)

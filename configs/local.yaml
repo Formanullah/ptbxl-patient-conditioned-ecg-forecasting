@@ -1,0 +1,45 @@
+# Edit this file for your manual local experiments.
+# Use new output paths when changing model/training settings for a fresh run.
+profile: local
+data:
+  root: PTB-XL
+  cache: data/pilot
+  sampling_rate: 500
+  history: 300
+  horizon: 150
+  start: 0
+subset:
+  source_cache: data/preprocessed
+  seed: 42
+  patients:
+    train: 450
+    val: 100
+    test: 100
+model:
+  hidden: 128
+  depth: 2
+  dropout: 0.2
+  static_embedding: 32
+training:
+  seed: 42
+  epochs: 5
+  patience: 3
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  num_workers: 0
+  threads: 4
+  device: auto
+contrastive:
+  weight: 0.1
+  temperature: 0.1
+  jitter_std: 0.01
+  gain_min: 0.95
+  gain_max: 1.05
+evaluation:
+  bootstrap_samples: 1000
+paths:
+  experiments: experiments/local
+  outputs: outputs/local
+  documents: Project_Documents/local

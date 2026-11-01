@@ -9,18 +9,19 @@ import pandas as pd
 import pytest
 import torch
 
-from tsa.config import load_config
-from tsa.data import ECGDataset, metadata, preprocess, static_features, validate_cache
-from tsa.evaluation import bootstrap_pair, metric_summary
-from tsa.models import Forecaster, augment, nt_xent
-from tsa.training import atomic_checkpoint, restore_rng, rng_state, seed_everything
+from compare import bootstrap_pair
+from config import load_config
+from evaluate import metric_summary
+from models import Forecaster, augment, nt_xent
+from preprocessing import ECGDataset, metadata, preprocess, static_features, validate_cache
+from train import atomic_checkpoint, restore_rng, rng_state, seed_everything
 
 
 def test_actual_wfdb_units_and_order(tmp_path):
     import wfdb
 
-    from tsa.config import LEADS
-    from tsa.data import read_wave
+    from config import LEADS
+    from preprocessing import read_wave
 
     cfg = load_config(Path(__file__).parents[1] / "configs/base.yaml")
     cfg["data"]["root"] = str(tmp_path)
@@ -96,7 +97,7 @@ def prepared(tmp_path, monkeypatch):
     def wave(row, config):
         return np.arange(5000 * 12, dtype=np.float32).reshape(5000, 12) / 1000 + row.ecg_id
 
-    monkeypatch.setattr("tsa.data.read_wave", wave)
+    monkeypatch.setattr("preprocessing.read_wave", wave)
     return cfg, frame
 
 
@@ -138,7 +139,7 @@ def test_future_isolation_cache_and_inverse(prepared, monkeypatch):
         a[16:] += 999
         return a
 
-    monkeypatch.setattr("tsa.data.read_wave", corrupt_future)
+    monkeypatch.setattr("preprocessing.read_wave", corrupt_future)
     changed = preprocess(cfg)
     np.testing.assert_array_equal(before_x, np.load(cache / "X_train.npy"))
     np.testing.assert_array_equal(before_static, np.load(cache / "static_train.npy"))
@@ -227,7 +228,7 @@ def test_cache_tampering_rejected(prepared):
 
 
 def test_evaluate_never_starts_training(prepared):
-    from tsa.training import evaluate_saved
+    from evaluate import evaluate_saved
 
     cfg, _ = prepared
     preprocess(cfg)
@@ -235,19 +236,120 @@ def test_evaluate_never_starts_training(prepared):
         evaluate_saved(cfg, "lstm", "patient_history")
 
 
-def test_cli_rejects_duplicate_writer(tmp_path, monkeypatch):
+def test_preprocessing_script_rejects_duplicate_writer(tmp_path, monkeypatch):
+    import runpy
     import sys
 
-    from filelock import FileLock
+    from filelock import FileLock, Timeout
 
-    from tsa.__main__ import main
-
-    config_path = Path(__file__).parents[1] / "configs/base.yaml"
+    project = Path(__file__).parents[1]
+    config_path = project / "configs/base.yaml"
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(sys, "argv", ["tsa", "preprocess", "--config", str(config_path)])
+    monkeypatch.setattr(sys, "argv", ["preprocessing.py", "--config", str(config_path)])
     with FileLock(".pipeline.lock"):
-        with pytest.raises(SystemExit, match="Another preparation/training job"):
-            main()
+        with pytest.raises(Timeout):
+            runpy.run_path(str(project / "src/preprocessing.py"), run_name="__main__")
+
+
+@pytest.mark.parametrize(
+    "script", ["preprocessing.py", "train.py", "evaluate.py", "compare.py", "report.py"]
+)
+def test_script_help(script):
+    import subprocess
+    import sys
+
+    project = Path(__file__).parents[1]
+    result = subprocess.run(
+        [sys.executable, str(project / "src" / script), "--help"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--config" in result.stdout
+
+
+@pytest.mark.parametrize("flag", ["--all", "--smoke"])
+def test_script_rejects_automated_training_modes(flag, monkeypatch):
+    import runpy
+    import sys
+
+    monkeypatch.setattr(sys, "argv", ["train.py", flag])
+    with pytest.raises(SystemExit) as exc:
+        runpy.run_path(str(Path(__file__).parents[1] / "src/train.py"), run_name="__main__")
+    assert exc.value.code == 2
+
+
+def test_train_script_uses_selected_model(prepared, monkeypatch):
+    import runpy
+    import sys
+
+    import yaml
+
+    import evaluate
+
+    cfg, _ = prepared
+    preprocess(cfg)
+    config_path = Path(cfg["data"]["cache"]).parent / "cli.yaml"
+    config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+    monkeypatch.setattr(evaluate, "learning_curves", lambda *args: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train.py",
+            "--config",
+            str(config_path),
+            "-model",
+            "cnn_lstm",
+            "--variant",
+            "demographics",
+        ],
+    )
+    runpy.run_path(str(Path(__file__).parents[1] / "src/train.py"), run_name="__main__")
+    run = Path(cfg["paths"]["experiments"]) / "cnn_lstm_demographics"
+    assert (run / "best.pt").exists() and (run / "training_metrics.json").exists()
+    assert not (run / "test_metrics.json").exists()
+
+
+def test_manual_training_requires_separate_evaluation_and_explicit_resume(prepared, monkeypatch):
+    import evaluate as evaluation
+    import train as training
+
+    cfg, _ = prepared
+    preprocess(cfg)
+    original_predict = evaluation.predict
+
+    def no_test_evaluation(*args, **kwargs):
+        pytest.fail("Training must not predict or evaluate the test split")
+
+    monkeypatch.setattr(evaluation, "predict", no_test_evaluation)
+    monkeypatch.setattr(evaluation, "evaluate_arrays", no_test_evaluation)
+    monkeypatch.setattr(training, "learning_curves", lambda *args: None)
+    with pytest.raises(ValueError, match="No checkpoint to resume"):
+        training.train(cfg, "lstm", "patient_history", resume=True)
+    summary = training.train(cfg, "lstm", "patient_history")
+    run = Path(cfg["paths"]["experiments"]) / "lstm_patient_history"
+    assert (run / "training_metrics.json").exists() and (run / "best.pt").exists()
+    assert "best_val_mse" in summary and "mae" not in summary
+    assert not (run / "test_metrics.json").exists() and not (run / "predictions.npz").exists()
+    with pytest.raises(ValueError, match="Use --resume"):
+        training.train(cfg, "lstm", "patient_history")
+    resumed = training.train(cfg, "lstm", "patient_history", resume=True)
+    assert resumed["epochs_completed"] == summary["epochs_completed"]
+
+    evaluations = 0
+
+    def measure(pred, true, x, metadata, *args):
+        nonlocal evaluations
+        evaluations += 1
+        return metric_summary(pred, true, metadata.patient_id.to_numpy())
+
+    monkeypatch.setattr(evaluation, "predict", original_predict)
+    monkeypatch.setattr(evaluation, "evaluate_arrays", measure)
+    evaluation.evaluate_saved(cfg, "lstm", "patient_history")
+    evaluation.evaluate_saved(cfg, "lstm", "patient_history")
+    assert evaluations == 2 and (run / "test_metrics.json").exists()
 
 
 def test_patient_subset_is_repeatable_and_refits_scalers(prepared):
@@ -286,19 +388,11 @@ def test_patient_subset_is_repeatable_and_refits_scalers(prepared):
 
 
 def test_interrupted_training_matches_uninterrupted(prepared, monkeypatch):
-    from tsa import training
+    import train as training
 
     cfg, _ = prepared
     preprocess(cfg)
 
-    # Plotting is orthogonal to resumption; keep this test small and focused on weights.
-    def evaluate(pred, true, x, metadata, run, config, manifest):
-        return {
-            "mae": float(np.abs(pred - true).mean()),
-            "rmse": float(np.sqrt(((pred - true) ** 2).mean())),
-        }
-
-    monkeypatch.setattr(training, "evaluate_arrays", evaluate)
     monkeypatch.setattr(training, "learning_curves", lambda *args: None)
     training.train(cfg, "lstm", "patient_history_contrastive")
     reference = torch.load(
@@ -321,7 +415,7 @@ def test_interrupted_training_matches_uninterrupted(prepared, monkeypatch):
     with pytest.raises(RuntimeError, match="simulated"):
         training.train(interrupted_cfg, "lstm", "patient_history_contrastive")
     monkeypatch.setattr(training, "epoch", real_epoch)
-    training.train(interrupted_cfg, "lstm", "patient_history_contrastive")
+    training.train(interrupted_cfg, "lstm", "patient_history_contrastive", resume=True)
     resumed = torch.load(
         Path(interrupted_cfg["paths"]["experiments"]) / "lstm_patient_history_contrastive/last.pt",
         weights_only=False,

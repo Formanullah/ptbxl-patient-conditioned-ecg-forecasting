@@ -1,5 +1,6 @@
 """Physical-unit metrics, subgroup summaries, and reproducible visualizations."""
 
+import argparse
 import os
 from pathlib import Path
 
@@ -11,8 +12,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
+from filelock import FileLock
 
-from .config import CLASSES, LEADS, read_json, write_json
+from config import CLASSES, LEADS, VARIANTS, load_config, read_json, runtime, write_json
+from models import build_model
+from preprocessing import ECGDataset, make_loaders, validate_cache
 
 
 def metric_summary(pred, true, patients):
@@ -195,124 +200,113 @@ def learning_curves(run, cfg):
     save_figure(fig, out / "learning_curves.png")
 
 
-def bootstrap_pair(a, b, samples=1000, seed=42):
-    """Paired patient-macro MAE delta B minus A; negative favors B."""
-    if set(a.ecg_id) != set(b.ecg_id):
-        raise ValueError("Cannot pair different test record sets")
-    joined = a[["ecg_id", "patient_id", "mae_mV"]].merge(
-        b[["ecg_id", "patient_id", "mae_mV"]],
-        on="ecg_id",
-        suffixes=("_a", "_b"),
-        validate="one_to_one",
-    )
-    if not joined.patient_id_a.equals(joined.patient_id_b):
-        raise ValueError("Patient assignments differ between runs")
-    joined["delta"] = joined.mae_mV_b - joined.mae_mV_a
-    delta = joined.groupby("patient_id_a").delta.mean().to_numpy()
-    rng = np.random.default_rng(seed)
-    boots = np.empty(samples)
-    for i in range(samples):
-        boots[i] = rng.choice(delta, size=len(delta), replace=True).mean()
-    return {
-        "delta_patient_macro_mae_mV": float(delta.mean()),
-        "ci95_low": float(np.quantile(boots, 0.025)),
-        "ci95_high": float(np.quantile(boots, 0.975)),
-        "patients": len(delta),
-        "bootstrap_samples": samples,
-    }
-
-
-def compare_runs(cfg):
-    root = Path(cfg["paths"]["experiments"])
-    out = Path(cfg["paths"]["outputs"])
-    out.mkdir(parents=True, exist_ok=True)
-    rows, fingerprints = [], set()
-    for run in sorted(root.iterdir()):
-        if not (run / "test_metrics.json").exists():
-            continue
-        metrics, config = read_json(run / "test_metrics.json"), read_json(run / "config.json")
-        if config.get("smoke"):
-            continue
-        fingerprints.add(metrics["fingerprint"])
-        rows.append(
-            {
-                "run": run.name,
-                **{
-                    k: metrics[k]
-                    for k in (
-                        "mae",
-                        "rmse",
-                        "mse",
-                        "r2",
-                        "pearson_mean",
-                        "patient_macro_mae",
-                        "n_test_records",
-                        "n_test_patients",
-                    )
-                },
-                "epochs": metrics.get("epochs_completed", 0),
-                "best_epoch": metrics.get("best_epoch"),
-                "training_seconds": metrics.get("training_seconds", 0),
-                "parameters": metrics.get("parameters", 0),
-            }
-        )
-    if len(fingerprints) > 1:
-        raise ValueError("Refusing comparison of mismatched protocols/caches")
-    if not rows:
-        raise ValueError("No measured full-data results found")
-    table = pd.DataFrame(rows)
-    table.to_csv(out / "model_comparison.csv", index=False)
-    fig, ax = plt.subplots(figsize=(11, 6))
-    display = table.copy()
-    display["label"] = display.run.map(
-        lambda name: (
-            name.replace("cnn_lstm_", "CNN-LSTM / ")
-            .replace("lstm_", "LSTM / ")
-            .replace("patient_history_contrastive", "History + contrastive")
-            .replace("patient_history", "History")
-            .replace("ecg_only", "ECG only")
-            .replace("demographics", "Demographics")
-            .replace("repeat_window", "Repeated window")
-            .replace("persistence", "Persistence")
-        )
-    )
-    display.set_index("label")[["mae", "rmse"]].rename(
-        columns={"mae": "MAE", "rmse": "RMSE"}
-    ).plot.barh(ax=ax)
-    ax.invert_yaxis()
-    ax.set(
-        xlabel="Error (mV)",
-        ylabel="",
-        title="Small-data pilot: held-out patients"
-        if cfg.get("subset")
-        else "Held-out patient test fold",
-    )
-    save_figure(fig, out / "model_comparison.png")
-    names = set(table.run)
-    pairs = []
-    for architecture in ("lstm", "cnn_lstm"):
-        pairs += [
-            (f"{architecture}_ecg_only", f"{architecture}_demographics", "demographics"),
-            (f"{architecture}_demographics", f"{architecture}_patient_history", "history"),
-            (
-                f"{architecture}_patient_history",
-                f"{architecture}_patient_history_contrastive",
-                "contrastive",
-            ),
-        ]
-    pairs += [
-        (f"lstm_{v}", f"cnn_lstm_{v}", "architecture")
-        for v in ("ecg_only", "demographics", "patient_history", "patient_history_contrastive")
-    ]
-    comparisons = []
-    for a, b, effect in pairs:
-        if a in names and b in names:
-            result = bootstrap_pair(
-                pd.read_csv(root / a / "per_record_metrics.csv"),
-                pd.read_csv(root / b / "per_record_metrics.csv"),
-                cfg["evaluation"]["bootstrap_samples"],
-                cfg["training"]["seed"],
+def predict(model, loader, device):
+    model.eval()
+    predictions, targets = [], []
+    with torch.inference_mode():
+        for batch in loader:
+            predictions.append(
+                model(batch["x"].to(device), batch["static"].to(device)).cpu().numpy()
             )
-            comparisons.append({"effect": effect, "A": a, "B": b, **result})
-    pd.DataFrame(comparisons).to_csv(out / "paired_patient_bootstrap.csv", index=False)
-    return table
+            targets.append(batch["y"].numpy())
+    return np.concatenate(predictions), np.concatenate(targets)
+
+
+def baselines(cfg):
+    manifest = validate_cache(cfg)
+    ds = ECGDataset(cfg, "test", "ecg_only")
+    mean, std = [
+        np.asarray(manifest[k], dtype=np.float32)[None, :, None] for k in ("mean_mV", "std_mV")
+    ]
+    x, true = np.asarray(ds.x) * std + mean, np.asarray(ds.y) * std + mean
+    horizon = cfg["data"]["horizon"]
+    predictions = {
+        "persistence": np.repeat(x[:, :, -1:], horizon, axis=2),
+        "repeat_window": np.tile(
+            x[:, :, -min(horizon, x.shape[-1]) :],
+            (1, 1, int(np.ceil(horizon / min(horizon, x.shape[-1])))),
+        )[:, :, :horizon],
+    }
+    for name, pred in predictions.items():
+        run = Path(cfg["paths"]["experiments"]) / name
+        run.mkdir(parents=True, exist_ok=True)
+        if (run / "test_metrics.json").exists():
+            if read_json(run / "test_metrics.json")["fingerprint"] != manifest["fingerprint"]:
+                raise ValueError("Baseline cache mismatch; use new output directory")
+        write_json(run / "config.json", {"config": cfg, "smoke": False, "baseline": name})
+        result = evaluate_arrays(pred, true, x, ds.metadata, run, cfg, manifest)
+        print(f"BASELINE {name}: MAE={result['mae']:.6f} mV", flush=True)
+
+
+def evaluate_saved(cfg, architecture, variant):
+    """Evaluate an existing selected checkpoint without training or changing weights."""
+    manifest = validate_cache(cfg)
+    run = Path(cfg["paths"]["experiments"]) / f"{architecture}_{variant}"
+    if not (run / "best.pt").exists() or not (run / "config.json").exists():
+        raise ValueError(f"No selected checkpoint at {run}; run train first")
+    recorded = read_json(run / "config.json")
+    if recorded["fingerprint"] != manifest["fingerprint"]:
+        raise ValueError("Evaluation cache differs from training cache")
+    device = runtime(cfg)
+    loaders = make_loaders(cfg, variant)
+    model = build_model(recorded["config"], architecture, loaders["train"].dataset.static_dim).to(
+        device
+    )
+    checkpoint = torch.load(run / "best.pt", map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint["model"])
+    pred, true = predict(model, loaders["test"], device)
+    mean, std = [
+        np.asarray(manifest[k], dtype=np.float32)[None, :, None] for k in ("mean_mV", "std_mV")
+    ]
+    ds = loaders["test"].dataset
+    summary = evaluate_arrays(
+        pred * std + mean,
+        true * std + mean,
+        np.asarray(ds.x) * std + mean,
+        ds.metadata,
+        run,
+        cfg,
+        manifest,
+    )
+    history = pd.read_csv(run / "history.csv")
+    summary.update(
+        {
+            "best_epoch": checkpoint["epoch"],
+            "best_val_mse": checkpoint["val_mse"],
+            "epochs_completed": len(history),
+            "training_seconds": float(history.seconds.sum()),
+            "parameters": recorded["parameters"],
+            "parameters_used_by_loss": recorded.get(
+                "parameters_used_by_loss", recorded["parameters"]
+            ),
+            "architecture": architecture,
+            "variant": variant,
+            "smoke": False,
+        }
+    )
+    write_json(run / "test_metrics.json", summary)
+    learning_curves(run, cfg)
+    print(f"EVALUATED {run.name}: MAE={summary['mae']:.6f} mV, RMSE={summary['rmse']:.6f} mV")
+    return summary
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", default="configs/local.yaml")
+    parser.add_argument("--model", "-model", choices=["lstm", "cnn_lstm"], default="lstm")
+    parser.add_argument("--variant", choices=VARIANTS, default="patient_history")
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"])
+    parser.add_argument(
+        "--baselines", action="store_true", help="Evaluate the two simple forecasts"
+    )
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    if args.device:
+        config["training"]["device"] = args.device
+
+    with FileLock(".pipeline.lock", timeout=0):
+        if args.baselines:
+            baselines(config)
+        else:
+            evaluate_saved(config, args.model, args.variant)

@@ -3,7 +3,7 @@
 **Small-data pilot: preliminary results; see the active-cohort table in the assignment report.**
 
 The results table contains completed runs for the configured cohort only. Check the assignment report
-and run tools/status.py with the matching configuration to check unfinished models
+and run src/status.py with the matching configuration to check unfinished models
 before presenting final comparisons. Progress files are stored with experiment logs.
 
 1. **Question and task:** forecast twelve cardiac voltage streams from 0.6 s observed to
