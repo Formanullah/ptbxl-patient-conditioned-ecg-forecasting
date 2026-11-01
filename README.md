@@ -1,5 +1,11 @@
 # Contrastive Patient-Stratified ECG Forecasts
 
+**New to the project?** Start with the
+[Configuration and Run Guide](Project_Documents/CONFIGURATION_AND_RUN_GUIDE.md).
+It explains every script, all YAML settings, installation, data preparation, testing,
+training, resuming runs, output locations, Colab, and troubleshooting, with commands
+in execution order.
+
 Forecast all 12 PTB-XL ECG leads at **500 Hz**, using **300 observed samples
 (0.6 s)** to predict **150 future samples (0.3 s)**. Static conditioning uses
 **age, sex, and strictly earlier diagnostic superclasses**: NORM, MI, STTC, CD, HYP.
@@ -23,8 +29,8 @@ tools/               Status inspection and notebook generation
 PTB-XL/              Raw dataset (Git ignored)
 data/                Full and pilot preprocessing caches (Git ignored)
 experiments/         Configurations, checkpoints, predictions, metrics (Git ignored)
-outputs/             Figures, comparisons, Colab bundle (Git ignored)
-Project_Documents/   Assignment reports and presentation notes
+outputs/             Figures and comparisons; pilot CSV/PNG tracked, bundles ignored
+Project_Documents/   Configuration/run guide, assignment reports, presentation notes
 ```
 
 Its trained weights and results are not reused. Use `python -m tsa` for all workflows.
