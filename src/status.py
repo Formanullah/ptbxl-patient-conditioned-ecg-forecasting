@@ -9,8 +9,37 @@ from config import VARIANTS, load_config, read_json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", default="configs/local.yaml")
+parser.add_argument("--experiment")
 args = parser.parse_args()
-cfg = load_config(args.config)
+cfg = load_config(args.config, args.experiment)
+
+if "history_seconds" in cfg["data"]:
+    rows = []
+    for folder in sorted(Path(cfg["paths"]["experiments"]).glob("*")):
+        if not folder.is_dir():
+            continue
+        history = (
+            pd.read_csv(folder / "history.csv")
+            if (folder / "history.csv").exists()
+            else pd.DataFrame()
+        )
+        recorded = read_json(folder / "config.json") if (folder / "config.json").exists() else {}
+        budget = recorded.get("config", cfg)["training"]["epochs"]
+        metrics = (
+            read_json(folder / "val_metrics.json") if (folder / "val_metrics.json").exists() else {}
+        )
+        rows.append(
+            {
+                "run": folder.name,
+                "epochs": len(history),
+                "budget": budget,
+                "state": "validated" if metrics and len(history) == budget else "resume required",
+                "validation_patient_macro_mae": metrics.get("patient_macro_mae"),
+                "resume": f"python src/train.py --config {folder.as_posix()}/config.json --resume",
+            }
+        )
+    print(pd.DataFrame(rows).to_string(index=False))
+    raise SystemExit(0)
 
 rows = []
 for architecture in ("lstm", "cnn_lstm"):

@@ -1,0 +1,32 @@
+{
+  "legacy_hashes_unchanged": 10,
+  "legacy_checkpoint_reloaded_mae": 0.15170641628105458,
+  "complete_epoch_budgets": {
+    "lstm_60": {
+      "actual_epochs": 60,
+      "last_epoch": 60,
+      "best_epoch": 1
+    },
+    "lstm_100": {
+      "actual_epochs": 100,
+      "last_epoch": 100,
+      "best_epoch": 1
+    },
+    "cnn_60": {
+      "actual_epochs": 60,
+      "last_epoch": 60,
+      "best_epoch": 1
+    },
+    "cnn_100": {
+      "actual_epochs": 100,
+      "last_epoch": 100,
+      "best_epoch": 1
+    }
+  },
+  "best_60_100_weights_identical": true,
+  "aligned_future_targets_identical": true,
+  "full_raw_audit_records": 21799,
+  "full_raw_audit_failures": 0,
+  "development_evaluated_runs": 55,
+  "new_test_prediction_files": 0
+}

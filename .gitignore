@@ -4,6 +4,7 @@
 /experiments/
 /outputs/*
 !/outputs/pilot/
+!/outputs/research_100hz_dev/
 /outputs/pilot/*.zip
 /outputs/pilot/smoke/
 __pycache__/
@@ -20,3 +21,5 @@ __pycache__/
 *.npz
 *.npy
 *colab_bundle.zip
+# Reversible local cleanup archives and future transfer bundles.
+*.zip

@@ -1,79 +1,65 @@
-# Class presentation and speaker notes
+﻿# Presentation notes: current project
 
-**Small-data pilot: preliminary results; see the active-cohort table in the assignment report.**
+Use the active assignment report for current patient counts and measured values. Do not copy scores from historical slides into the larger-cohort results. The latest refactor has not been run or tested; training/evaluation for the selected larger cohort is pending.
 
-The results table contains completed runs for the configured cohort only. Check the assignment report
-and run src/status.py with the matching configuration to check unfinished models
-before presenting final comparisons. Progress files are stored with experiment logs.
+## 1. Research question
 
-1. **Question and task:** forecast twelve cardiac voltage streams from 0.6 s observed to
-   the next 0.3 s. Explain why patient context might help; improvement is an empirical question.
-2. **Dataset and data integrity:** PTB-XL v1.0.3, 500 Hz, mV, official patient folds. Show
-   the audit and train-only preprocessing. Explain why random window splitting leaks patients.
-3. **Conditioning:** age/sex/masks -> 4 features; plus five prior diagnosis indicators and
-   history mask -> 10. Show strict chronological construction and limited history coverage.
-4. **LSTM shapes:** [B,12,300] -> transpose [B,300,12] -> two-layer LSTM -> final [B,128].
-   Static [B,10] -> [B,32]; concatenate -> [B,160] -> 256 -> 1800 -> [B,12,150].
-5. **LSTM gates:** z_t=[h_(t-1),x_t]. Forget f_t=sigmoid(W_f z_t+b_f), input
-   i_t=sigmoid(W_i z_t+b_i), candidate g_t=tanh(W_g z_t+b_g), memory
-   c_t=f_t*c_(t-1)+i_t*g_t, output o_t=sigmoid(W_o z_t+b_o), h_t=o_t*tanh(c_t).
-   Sigmoid gates control flow in [0,1]; tanh supplies signed content; * is elementwise.
-6. **Memory and BPTT:** unroll across 300 samples and backpropagate through both layers.
-   The direct memory path contains products of forget gates; it helps but does not eliminate
-   vanishing gradients. Exploding gradients motivate norm clipping at 1.0.
-7. **CNN operation:** Y[o,t]=b[o]+sum_c sum_k W[o,c,k] X[c,t+k-padding]. PyTorch uses
-   cross-correlation. Filters span input leads and local time, share weights across time,
-   and learn morphology. Explain padding, stride, channels, ReLU and average pooling.
-8. **CNN-LSTM shapes:** [B,12,300] -> conv [B,32,300] -> [B,64,300] -> pool
-   [B,64,150] -> conv [B,64,150] -> transpose [B,150,64] -> LSTM [B,128].
-   The forecast/static head is shared in design with LSTM; recurrent input size differs.
-9. **Contrastive learning:** augment only observed voltage; clean input drives forecast.
-   Two views -> shared dynamic encoder -> projection -> normalized vectors. Pull paired
-   views together, distinguish different patients, and mask same-patient false negatives.
-   Static covariates do not enter the contrastive representation.
-10. **Loss and optimization:** MSE + 0.1 NT-Xent (temperature 0.1); AdamW lr 0.001,
-    weight decay 0.0001, batch 64, dropout 0.2. Show zero_grad -> forward -> loss ->
-    backward -> clip -> optimizer.step. Validation uses forecast MSE without augmentation.
-11. **Experiment design:** two architectures x four variants = eight runs, same seed/folds,
-    plus persistence/repeated-window baselines. Best validation epoch, patience 3,
-    maximum 5. Explain why comparing total contrastive loss with plain MSE is misleading.
-12. **Results:** insert the table below, learning curves and paired-patient intervals.
-    Explain mV/mV^2, MAE/RMSE, R2 and correlation. Negative R2 is possible and meaningful.
-13. **Forecasts:** show lowest-ID, median-error and worst-error twelve-lead plots. The
-    vertical boundary is forecast origin. Discuss attenuated peaks and timing errors.
-14. **Patient strata:** show age/sex/diagnosis/history panels with counts. Diagnostic groups
-    overlap; a small group is not evidence of a stable clinical difference.
-15. **Literature:** explain Table 1 versus abstract conflicts and protocol/scaling differences.
-    Do not rank unaligned numerical errors. The paper remains local.
-16. **Conclusions:** state only measured changes. One seed, sparse history and short context
-    limit conclusions. Future work: longer contexts, repeated seeds, verified history and
-    clinical evaluation before claims about false alarms.
+“We test whether patient context helps predict future ECG voltages. We observe five seconds at 100 Hz and predict the next three seconds across all twelve leads. Age, sex and strictly prior diagnostic history can condition the forecast.”
 
-## Architecture diagram
+## 2. Data and preprocessing
 
-```mermaid
-flowchart LR
-    X[Observed 12-lead ECG] --> C[Optional temporal CNN]
-    C --> L[Two-layer LSTM]
-    L --> H[Dynamic state 128]
-    S[Age / sex / prior diagnoses] --> E[Static embedding 32]
-    H --> F[Concatenate and forecast MLP]
-    E --> F
-    F --> Y[12 x 150 future voltages]
-    H --> P[Projection 64: contrastive training only]
+“Our main configuration selects 1,500 training, 300 validation and 100 reserved test patients. Whole patients stay within official folds. Multiple training windows are allowed; validation and test use one window per recording. Scaling and imputation fit training data only. Current-record diagnoses never become historical inputs.”
+
+“Native 100 Hz reduces the sequence length compared with 500 Hz, making longer observed context practical. It also has coarser temporal resolution; it is not a claim of better clinical signal quality. Five hundred observed samples at 100 Hz represent five seconds.”
+
+“The current input uses no extra filter and training median/IQR scaling. Causal high-pass and bandpass options remain available for controlled comparisons. The future target remains original unfiltered voltage. Filtering is an experiment, not assumed improvement.”
+
+## 3. Features
+
+“ECG-only has zero static inputs. Demographics has four values: age, sex and flags. Prior history has ten values, adding five diagnostic superclasses and a history flag. Expanded features total 22 with height, weight, BMI, observed heart rate and RR summaries. Missing features receive training-fitted imputation and explicit flags.”
+
+“mRMR balances training-target relevance against feature redundancy. Grouped permutation measures validation error changes when related features and flags are shuffled together. These rankings describe predictive association, not causality.”
+
+## 4. LSTM and CNN-LSTM
+
+```text
+LSTM:      ECG sequence → LSTM memory → dynamic state ─┐
+                                                     ├→ forecast head → [B,300,12]
+Late fusion: static features → embedding ─────────────┘
+
+CNN-LSTM:  ECG → Conv k7 → Conv k5 → AvgPool /2 → Conv k3 → LSTM → head
+Early fusion: concatenate the repeated static embedding before the temporal encoder.
 ```
 
-## Measured test results
+“The LSTM input, forget and output gates control its memory. At each timestep it updates the cell state and hidden state. CNN layers learn local temporal patterns; the LSTM then models their sequence. Early fusion lets context influence the encoder; late fusion joins it at the head.”
 
-| run | mae | rmse | patient_macro_mae | best_epoch |
-| --- | --- | --- | --- | --- |
-| cnn_lstm_demographics | 0.155650 | 0.434724 | 0.152838 | 5.000000 |
-| cnn_lstm_ecg_only | 0.154296 | 0.433948 | 0.151576 | 4.000000 |
-| cnn_lstm_patient_history | 0.154251 | 0.433902 | 0.151215 | 5.000000 |
-| cnn_lstm_patient_history_contrastive | 0.155719 | 0.435588 | 0.152772 | 5.000000 |
-| lstm_demographics | 0.151759 | 0.431238 | 0.148413 | 5.000000 |
-| lstm_ecg_only | 0.151706 | 0.430543 | 0.148435 | 4.000000 |
-| lstm_patient_history | 0.150113 | 0.430582 | 0.146684 | 5.000000 |
-| lstm_patient_history_contrastive | 0.151782 | 0.431546 | 0.148438 | 4.000000 |
-| persistence | 0.141546 | 0.358149 | 0.129724 | undefined |
-| repeat_window | 0.168642 | 0.336686 | 0.161466 | undefined |
+For an LSTM step, with `z_t = [h_(t−1), x_t]`:
+
+```text
+f_t = sigmoid(W_f z_t + b_f)       forget gate
+ i_t = sigmoid(W_i z_t + b_i)      input gate
+ g_t = tanh(W_g z_t + b_g)         candidate memory
+ c_t = f_t * c_(t−1) + i_t * g_t   cell update
+ o_t = sigmoid(W_o z_t + b_o)      output gate
+ h_t = o_t * tanh(c_t)            hidden state
+```
+
+“Backpropagation through time computes gradients through recurrent operations. AdamW updates weights, and gradient clipping limits large updates. The future target is hidden from the input but used to calculate the training loss.”
+
+## 5. Training and comparisons
+
+“The configured starting model uses hidden size 64, one LSTM layer, dropout 0.2, batch size 64 and learning rate 0.001. The budget is 60 epochs, with early stopping disabled. These settings came from exploratory development; their suitability on the larger cohort must be measured.”
+
+“We compare the same architecture with different feature sets and compare LSTM versus CNN-LSTM with the same features, patients and windows. Contrastive learning adds agreement between two augmented observed views. It excludes same-patient negatives and does not use future ECG as an input.”
+
+## 6. Evaluation and results
+
+“Best checkpoints are selected by validation patient-macro MAE in mV. We also report RMSE, MSE, R², per-lead Pearson, subgroup errors and QRS measures. A constant prediction can have low MAE while missing every heartbeat, so waveform overlays and peak scores matter.”
+
+“For the current larger cohort, training and evaluation remain pending. Present only values actually populated in the active report. Earlier small-cohort neural predictions did not preserve future R-peaks reliably; more data is a testable next step, not a guaranteed fix.”
+
+## 7. Reproducibility and next steps
+
+“One main YAML controls the cohort and training. Optional named recipes inherit it. Dataset-specific paths and provenance checks keep scores separate. We manually prepare, audit, train, evaluate and regenerate the report. Full fold-10 evaluation follows frozen full-population validation choices.”
+
+The earlier presentation and report are historical artifacts under `outputs/pilot/`. Superseded files are backed up locally; no private paper is included in transfers.

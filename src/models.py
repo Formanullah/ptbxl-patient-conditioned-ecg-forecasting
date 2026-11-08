@@ -1,4 +1,4 @@
-"""Dynamic encoders, late static fusion, and patient-masked NT-Xent."""
+"""LSTM/CNN-LSTM encoders, early/late static fusion, and patient-masked NT-Xent."""
 
 import torch
 from torch import nn
@@ -15,26 +15,38 @@ class Forecaster(nn.Module):
         depth=2,
         dropout=0.2,
         static_embedding=32,
+        fusion="late",
+        input_layout="channels_first",
+        kernels=(7, 5, 3),
+        pool=2,
+        residual=False,
+        head_width=256,
     ):
         super().__init__()
         if architecture not in ("lstm", "cnn_lstm"):
             raise ValueError("Unknown architecture")
         self.horizon = horizon
+        if fusion not in ("late", "early") or input_layout not in ("time_first", "channels_first"):
+            raise ValueError("Unknown fusion or input layout")
+        if len(kernels) != 3 or any(k < 1 or k % 2 == 0 for k in kernels) or pool < 1:
+            raise ValueError("Three odd positive kernels and positive pooling are required")
+        self.fusion, self.input_layout, self.residual = fusion, input_layout, residual
+        channels = 12 + (static_embedding if static_dim and fusion == "early" else 0)
         self.cnn = (
             nn.Identity()
             if architecture == "lstm"
             else nn.Sequential(
-                nn.Conv1d(12, 32, 7, padding=3),
+                nn.Conv1d(channels, 32, kernels[0], padding=kernels[0] // 2),
                 nn.ReLU(),
-                nn.Conv1d(32, 64, 5, padding=2),
+                nn.Conv1d(32, 64, kernels[1], padding=kernels[1] // 2),
                 nn.ReLU(),
-                nn.AvgPool1d(2),
-                nn.Conv1d(64, 64, 3, padding=1),
+                nn.AvgPool1d(pool),
+                nn.Conv1d(64, 64, kernels[2], padding=kernels[2] // 2),
                 nn.ReLU(),
             )
         )
         self.rnn = nn.LSTM(
-            12 if architecture == "lstm" else 64,
+            channels if architecture == "lstm" else 64,
             hidden,
             num_layers=depth,
             dropout=dropout if depth > 1 else 0,
@@ -46,29 +58,50 @@ class Forecaster(nn.Module):
             else None
         )
         self.head = nn.Sequential(
-            nn.Linear(hidden + (static_embedding if static_dim else 0), 256),
+            nn.Linear(
+                hidden + (static_embedding if static_dim and fusion == "late" else 0), head_width
+            ),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(256, 12 * horizon),
+            nn.Linear(head_width, 12 * horizon),
         )
         self.projector = nn.Sequential(nn.Linear(hidden, 128), nn.ReLU(), nn.Linear(128, 64))
 
-    def encode(self, x):
+    def encode(self, x, static=None):
+        if self.input_layout == "time_first":
+            x = x.transpose(1, 2)
+        if self.static_net is not None and self.fusion == "early":
+            if static is None:
+                # Contrastive projection deliberately excludes patient metadata.
+                embedding = x.new_zeros((len(x), self.static_net[0].out_features))
+            else:
+                embedding = self.static_net(static)
+            x = torch.cat([x, embedding[:, :, None].expand(-1, -1, x.shape[-1])], dim=1)
         _, (h, _) = self.rnn(self.cnn(x).transpose(1, 2))
         return h[-1]
 
     def forward(self, x, static):
-        h = self.encode(x)
-        if self.static_net is not None:
+        h = self.encode(x, static)
+        if self.static_net is not None and self.fusion == "late":
             h = torch.cat([h, self.static_net(static)], dim=-1)
-        return self.head(h).reshape(-1, 12, self.horizon)
+        result = self.head(h).reshape(-1, 12, self.horizon)
+        if self.residual:
+            last = x[:, -1, :, None] if self.input_layout == "time_first" else x[:, :, -1:]
+            result = result + last
+        return result.transpose(1, 2) if self.input_layout == "time_first" else result
 
     def project(self, x):
         return F.normalize(self.projector(self.encode(x)), dim=-1)
 
 
 def build_model(cfg, architecture, static_dim):
-    return Forecaster(architecture, static_dim, horizon=cfg["data"]["horizon"], **cfg["model"])
+    return Forecaster(
+        architecture,
+        static_dim,
+        horizon=cfg["data"]["horizon"],
+        input_layout=cfg["data"].get("layout", "channels_first"),
+        **cfg["model"],
+    )
 
 
 def augment(x, settings):

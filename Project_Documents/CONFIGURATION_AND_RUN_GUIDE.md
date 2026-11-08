@@ -1,395 +1,244 @@
-# Manual configuration and run guide
+﻿# Configuration and run guide
 
-All project code is directly in `src/`. Run commands from the project root using
-`python src/<script>.py`. Activate the environment once per terminal, edit one YAML
-configuration, then choose which model and operation to run.
+Use this guide in order. Every command is manual. The recent cleanup/refactor has not been run or tested because you requested no code execution.
 
-## 1. What “pilot” means
+## 1. Set up the environment
 
-`configs/pilot.yaml` selects a small patient subset to reduce CPU training time.
-It is the same forecasting task and the same models as the full-data experiment.
-
-| Configuration | Training / validation / test ECGs | Maximum epochs |
-| --- | --- | --- |
-| `pilot.yaml` | 515 / 108 / 116 | 5 |
-| `base.yaml` | 17,418 / 2,183 / 2,198 | 25 |
-
-The small split contains 450/100/100 patients. All records of a selected patient are
-kept, with patients separated between splits. Small-data training is optional;
-you can use the full dataset when you have enough time.
-
-Current implementation: preparing the small cache requires a matching full cache
-once. Smaller training does not avoid initial full-data preprocessing.
-
-## 2. Install and activate
-
-Open PowerShell at the project root:
-
-```powershell
-cd D:\Study\HIS_Project\Project\ptbxl_assignment
-```
-
-For a fresh setup:
+Open PowerShell in the project folder:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 ```
 
-For an existing setup, only activate:
+Create `.venv` only once. On later days, activate it and continue. Do not create `pytest.py`: `python src/run_tests.py -q` is the existing test runner. `-q` means quieter test output.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
+## 2. Choose data in one file
 
-If activation is blocked, run
-`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in that terminal and
-retry. The prompt should show `(.venv)`. Use `python` normally afterward.
-
-## 3. Configure one experiment
-
-Open the ready-made `configs/local.yaml`. All scripts use it by default.
-It starts with small-data settings and separate local output paths. Keep its
-sections and edit the values you need. An explicit `--config` selects another YAML.
-
-| Field | Purpose | Small-run value |
-| --- | --- | --- |
-| `data.root` | Folder containing raw metadata and waveform directories | `PTB-XL` |
-| `data.cache` | Prepared arrays to reuse | `data/pilot` |
-| `data.sampling_rate` | ECG samples per second | `500` |
-| `data.history` | Observed samples | `300` |
-| `data.horizon` | Future samples | `150` |
-| `data.start` | Starting sample | `0` |
-| `subset.source_cache` | Full cache used to select the small cohort | `data/preprocessed` |
-| `subset.seed` | Patient-selection seed | `42` |
-| `subset.patients.train/val/test` | Patient counts | `450/100/100` |
-| `model.hidden` | LSTM hidden size | `128` |
-| `model.depth` | Recurrent layers | `2` |
-| `model.dropout` | Recurrent interlayer/head dropout | `0.2` |
-| `model.static_embedding` | Static feature embedding width | `32` |
-| `training.seed` | Initialization, shuffle and augmentation seed | `42` |
-| `training.epochs` | Maximum epochs | `5` |
-| `training.patience` | Stop after this many unimproved validation epochs | `3` |
-| `training.batch_size` | Recordings per batch | `64` |
-| `training.lr` | AdamW learning rate | `0.001` |
-| `training.weight_decay` | Regularization | `0.0001` |
-| `training.gradient_clip` | Maximum gradient norm | `1.0` |
-| `training.device` | `auto`, `cpu` or `cuda` | `auto` |
-| `training.threads` | CPU threads | `4` |
-| `training.num_workers` | DataLoader worker processes | `0` |
-| `contrastive.weight` | Additional loss weight | `0.1` |
-| `contrastive.temperature` | NT-Xent similarity scaling | `0.1` |
-| `contrastive.jitter_std` | Noise in normalized units | `0.01` |
-| `contrastive.gain_min/gain_max` | ECG augmentation gain range | `0.95/1.05` |
-| `evaluation.bootstrap_samples` | Patient resamples for comparison intervals | `1000` |
-
-The default local output paths are:
+Edit `configs/training.yaml`:
 
 ```yaml
-paths:
-  experiments: experiments/local
-  outputs: outputs/local
-  documents: Project_Documents/local
+data:
+  root: PTB-XL
+  sampling_rate: 100
+  history_seconds: 5.0
+  horizon_seconds: 3.0
+  window_stride_seconds: 1.0
+subset:
+  mode: custom
+  seed: 42
+  patients: {train: 1500, val: 300, test: 100}
 ```
 
-Use new paths for each changed experiment. Existing checkpoints require the same
-scientific settings, including epochs. Paths, CPU threads, worker count and device
-can change for portability; results can still vary across hardware.
+- `root`: the folder containing metadata and native `records100/` waveforms.
+- `history_seconds`: the ECG the model observes. Five seconds at 100 Hz gives 500 samples.
+- `horizon_seconds`: the future ECG the model predicts. Three seconds gives 300 samples.
+- `window_stride_seconds`: spacing between training-window starts. Three valid 5-to-3-second windows fit in a ten-second recording with a one-second stride.
+- `patients`: whole patients selected inside each official split, retaining their recordings.
+- `mode: full`: use every official patient; the patient-count settings are then ignored.
 
-## 4. Prepare data
+For fractions instead of counts, replace `patients` with `fractions: {train: 0.2, val: 0.2, test: 0.1}` while keeping `mode: custom`. Values must lie in (0,1]. Do not leave both counts and fractions: fractions take precedence.
 
-Raw data must contain `ptbxl_database.csv`, `scp_statements.csv` and `records500/`
-under `data.root`. Correct the root in the full and local configurations.
+The loader converts seconds to samples. You do not edit `history` or `horizon` sample counts separately. The complete observed+future window must fit within ten seconds. Training statistics come only from training inputs.
 
-For fresh data:
+Dataset settings determine a cohort identifier and separate locations under `data/`, `experiments/` and `outputs/`. The same cohort can share models while filtered/scaled inputs have separate caches. Explicit paths in a saved checkpoint configuration are preserved for resume. Never edit those snapshot paths to disguise a different cohort.
 
-```powershell
-python src/preprocessing.py --audit --config configs/base.yaml
-python src/preprocessing.py --config configs/base.yaml
-python src/preprocessing.py --config configs/local.yaml
-```
-
-The first checks raw data, the second builds the full cache, and the third prepares
-your small subset. If the matching caches already exist, skip preparation.
-
-Checks cover shape, sampling rate, units, leads, finite ECG values and patient
-isolation. Invalid records are listed explicitly. Normalization uses training input
-windows only. Age/sex and strictly earlier diagnoses become static inputs with
-missingness flags. The manifest stores the protocol, identifiers, statistics and
-file hashes.
-
-There is no model choice for preprocessing: both architectures use the same arrays.
-At 500 Hz, the input covers 0.6 seconds and the target the next 0.3 seconds.
-
-## 5. Test the software when needed
+## 3. Check and prepare
 
 ```powershell
 python src/run_tests.py -q
+python src/preprocessing.py
+python src/leakage_audit.py
 ```
 
-Tests use synthetic ECG fixtures. They check patient isolation, chronology,
-normalization, model gradients, contrastive masks, metrics, explicit resume and
-the separation between training and evaluation.
+`preprocessing.py` reads selected raw ECGs, verifies waveforms, constructs windows and strictly prior-history features, fits training-only transformations and saves memory-mapped arrays plus a manifest. It reuses an existing matching cache and rejects an incompatible one.
 
-Use `src/run_tests.py`, rather than `pytest.py`, to avoid shadowing pytest.
-You can also run `pytest -q` directly after activating the environment.
+`leakage_audit.py` checks patient/record/window separation, train-only statistics and future-mutation invariance. This is required again for a changed cohort. An optional complete raw-waveform audit is `python src/preprocessing.py --audit`; it scans the raw metadata population, not only the selected subset.
 
-Disposable test files are stored in `.cache/test-temp`, pytest's cache in
-`.cache/pytest`, and Ruff's cache in `.cache/ruff`. These paths are configured in
-`pyproject.toml`, keeping temporary tool folders together. They are ignored by Git.
-The test-temp directory is reserved for pytest, which clears it between runs.
+The 1,500/300/100 cohort was prepared before the stop-execution instruction: 1,731 / 336 / 114 recordings and 5,193 / 336 / 114 windows. The refactored implementation and that cohort's leakage audit have not subsequently been run.
 
-## 6. Train one model
+## 4. Train one model
 
 ```powershell
-python src/train.py --config configs/local.yaml --model lstm --variant patient_history
+python src/train.py --model lstm --variant patient_history
 ```
 
-This uses training and validation loaders. It saves the selected weights,
-resumable state, validation summary and learning curve. It does not run test
-inference, another model, comparison or reporting.
+This trains only that model. Training reads training/validation loaders, saves epoch metrics, selects `best.pt` using validation patient-macro MAE in mV, and saves resumable `last.pt`. It does not run the final test evaluation or automatically train other models.
 
-Inspect:
+Choose `--model lstm` or `--model cnn_lstm` and one variant:
 
-```text
-experiments/local/lstm_patient_history/
-  config.json
-  feature_manifest.json
-  history.csv
-  best.pt
-  last.pt
-  training_metrics.json
-```
-
-`best.pt` is chosen by validation forecast MSE. `training_metrics.json` includes
-`best_val_mse`, `best_epoch` and runtime. Training stops at the configured epoch
-limit or early-stopping patience.
-
-For a quick check, copy the configuration, set `training.epochs: 2` and
-`training.patience: 2`, and use separate output paths. There is no hidden smoke
-mode or automatic experiment matrix.
-
-## 7. Evaluate that model separately
-
-After choosing settings using validation performance:
-
-```powershell
-python src/evaluate.py --config configs/local.yaml --model lstm --variant patient_history
-```
-
-This runs test inference with the selected checkpoint and writes:
-
-```text
-experiments/local/lstm_patient_history/
-  test_metrics.json
-  predictions.npz
-  per_record_metrics.csv
-
-outputs/local/lstm_patient_history/
-  per_lead_metrics.csv, per_lead_errors.png
-  subgroup_metrics.csv, subgroup_errors.png
-  horizon_metrics.csv, horizon_error.png
-  forecast_lowest_id.png
-  forecast_median_error.png
-  forecast_worst_error.png
-```
-
-Calling evaluation again recomputes the selected model's test metrics and figures.
-No model is trained by this command.
-
-Now choose CNN-LSTM explicitly:
-
-```powershell
-python src/train.py --config configs/local.yaml --model cnn_lstm --variant patient_history
-python src/evaluate.py --config configs/local.yaml --model cnn_lstm --variant patient_history
-```
-
-## 8. Compare evaluated models
-
-First evaluate simple baselines, then request the comparison:
-
-```powershell
-python src/evaluate.py --baselines --config configs/local.yaml
-python src/compare.py --config configs/local.yaml
-```
-
-Open `outputs/local/model_comparison.csv` or `model_comparison.png`.
-Only evaluated runs appear. Training a model alone does not add test results.
-
-| Question | Pair to compare |
+| Variant | Static inputs |
 | --- | --- |
-| Does a CNN help? | LSTM versus CNN-LSTM, same variant |
-| Do age and sex help? | `ecg_only` versus `demographics`, same architecture |
-| Does diagnostic history help? | `demographics` versus `patient_history`, same architecture |
-| Does contrastive learning help? | `patient_history` versus `patient_history_contrastive`, same architecture |
-| Does learning beat simple forecasting? | Neural forecasts versus persistence/repeated-window baselines |
+| `ecg_only` | None |
+| `demographics` | Age, sex and missingness flags: 4 values |
+| `patient_history` | Demographics, prior diagnostic superclasses and history flag: 10 values |
+| `patient_history_contrastive` | The same 10 inputs, plus contrastive training |
+| `expanded` | Also height, weight, BMI and observed HR/RR features: 22 values |
+| `mrmr` / `permutation` | Fingerprint-checked selected feature groups |
 
-Repeat Steps 6-7 yourself for each architecture/variant you choose.
-Both architectures accept:
+For CPU/GPU selection, use `--device cpu` or `--device cuda`, or leave `training.device: auto`. GPU availability is not guaranteed by the configuration.
 
-```text
-ecg_only
-demographics
-patient_history
-patient_history_contrastive
-```
-
-Eight neural comparisons means two architectures times four variants.
-The confidence-interval table contains only pairs with both evaluated runs.
-
-Lower MAE/RMSE is better. MAE/RMSE are in mV and MSE in mV squared. Train/validation
-MSE uses normalized units. Bootstrap differences are B minus A; negative favors B.
-An interval crossing zero does not establish a clear difference.
-
-## 9. Generate documents when you choose
+## 5. Evaluate, then compare
 
 ```powershell
-python src/report.py --config configs/local.yaml
+python src/evaluate.py --model lstm --variant patient_history --split val
+python src/train.py --model cnn_lstm --variant patient_history
+python src/evaluate.py --model cnn_lstm --variant patient_history --split val
+python src/evaluate.py --baselines --split val
+python src/report.py
 ```
 
-This writes the report and presentation notes to `Project_Documents/local/`, using
-available evaluation artifacts. It does not train or evaluate missing models.
-Missing comparisons are marked incomplete.
+Evaluate explicitly after each desired run. The baseline command evaluates last-value persistence, repeated observed samples and a constant training-median reference. It does not train a neural model.
 
-The existing report and notes in the root of `Project_Documents/` describe the
-completed original small-data runs; your new local report stays separate.
+Compare architectures with the same features and training settings. Compare ECG-only → demographics → patient history to study conditioning. Compare patient history → contrastive history for the auxiliary loss. Compare early/late fusion while keeping the other settings fixed. Low voltage MAE does not necessarily mean realistic R-peaks; inspect the waveform and QRS plots.
 
-## 10. Try different parameters
+`report.py` refreshes the single active `Project_Documents/ASSIGNMENT_REPORT.md`, including the current requested/actual cohort, execution state, available metrics, settings, uncertainty and figures. It does not retrain or generate predictions. Before training it reports pending results. Different cohort/window identifiers and provenance checks prevent old scores from being reused as larger-dataset scores.
 
-Example: change hidden size from 128 to 64 without changing the data.
+Run `python src/compare.py` if you need comparison CSVs/charts without rewriting the report. No automatic watcher or run-everything command exists.
 
-```powershell
-Copy-Item configs/local.yaml configs/local_h64.yaml
-```
+## 6. Change parameters without overwriting a run
 
-In the copied file, change `model.hidden: 64` and replace the three output paths
-with `experiments/local_h64`, `outputs/local_h64` and
-`Project_Documents/local_h64`. Keep all other fields and the same cache.
+Settings belong to these sections:
 
-```powershell
-python src/train.py --config configs/local_h64.yaml --model lstm --variant patient_history
-```
-
-Compare validation performance before choosing settings:
-
-```powershell
-Get-Content experiments/local/lstm_patient_history/training_metrics.json | ConvertFrom-Json | Select-Object best_epoch,best_val_mse
-Get-Content experiments/local_h64/lstm_patient_history/training_metrics.json | ConvertFrom-Json | Select-Object best_epoch,best_val_mse
-```
-
-These validation values are comparable because the runs share the same cache.
-Choose settings using validation, then explicitly evaluate the chosen run.
-For older existing runs without `training_metrics.json`, inspect `history.csv`.
-
-Follow the same copy/change/train pattern for learning rate, dropout or batch size.
-Change one setting at a time to understand its effect. Model/training changes reuse
-the cache; changing the cohort or ECG window requires new preprocessing.
-
-The comparison script reads one configured experiment directory. It does not
-combine arbitrary hyperparameter directories. You can open their result tables
-side by side after evaluation.
-
-## 11. Resume deliberately
-
-Press Ctrl+C to stop. To continue the exact same model/configuration:
-
-```powershell
-python src/train.py --resume --config configs/local.yaml --model lstm --variant patient_history
-```
-
-Resume restores weights, optimizer state, shuffle/augmentation randomness and
-history from the last completed epoch. Work in an interrupted epoch is repeated.
-
-Without `--resume`, an existing saved run produces an explicit error. To start
-fresh, choose new output paths. Changing the epoch limit or other scientific
-settings in the original run is rejected; copy the config for a fresh experiment.
-
-If the original run has already reached its epoch/early-stopping limit, explicit
-resume performs no additional epochs. You can evaluate its selected checkpoint.
-
-Inspect progress:
-
-```powershell
-python src/status.py --config configs/local.yaml
-```
-
-Progress is saved beside experiment logs as `TRAINING_STATUS.md`.
-A writer lock prevents concurrent preparation/training/evaluation from colliding.
-
-## 12. Increase the data
-
-For a medium-sized cohort, copy the local config and change:
-
-| Field | Example |
+| Section | Examples |
 | --- | --- |
-| `data.cache` | `data/medium` |
-| `subset.patients.train/val/test` | `1500/300/100` |
-| `training.epochs / patience` | `15 / 5` |
-| `paths.experiments` | `experiments/medium` |
-| `paths.outputs` | `outputs/medium` |
-| `paths.documents` | `Project_Documents/medium` |
+| `data` / `subset` | Sampling rate, windows, stride, patient counts |
+| `preprocessing` | `filter: none/highpass/bandpass`; `scaling: zscore/robust` |
+| `model` | Hidden size, depth, dropout, static embedding, early/late fusion, kernels, pooling |
+| `training` | Epochs, learning rate, batch size, optimizer weight decay, loss, scheduler |
+| `contrastive` | Weight, temperature, jitter, gain range |
+| `evaluation` | Bootstrap count, peak tolerance, final-test permission |
 
-Keep the same subset seed and test cohort during development.
-Run preprocessing for the new cohort, then train/evaluate each chosen model.
-
-For all data, copy `configs/base.yaml` to `configs/full_local.yaml` and set new
-output paths. It has no `subset` section and reuses the full prepared cache:
+Use the optional `configs/experiments.yaml` for named changes. For example, `lstm_hidden_128` changes hidden size and `lstm_lr_0005` changes learning rate. These inherit the main data configuration:
 
 ```powershell
-python src/train.py --config configs/full_local.yaml --model lstm --variant patient_history
-python src/evaluate.py --config configs/full_local.yaml --model lstm --variant patient_history
+python src/train.py --config configs/experiments.yaml --experiment lstm_hidden_128
+python src/evaluate.py --config configs/experiments.yaml --experiment lstm_hidden_128 --split val
+python src/report.py
 ```
 
-Changing the ECG window/rate requires a new matching full cache and, if used, a
-new subset cache. Windows must fit within ten seconds:
-`start + history + horizon <= 10 * sampling_rate`.
-Keep 500 Hz and 300-to-150 windows for the agreed assignment comparison.
+To add another experiment, give it a unique name:
 
-## 13. Script and file reference
+```yaml
+  lstm_lr_0001_100epochs:
+    training: {lr: 0.0001, epochs: 100}
+```
+
+Put it under `experiments:`. Changing multiple factors is allowed, but it no longer isolates one factor's effect. Do not edit a completed run's saved configuration. For full 60/100-epoch comparisons use distinct names and `early_stopping: false`.
+
+For a different filter/scaler, prepare that recipe's cache before training:
+
+```powershell
+python src/preprocessing.py --config configs/experiments.yaml --experiment lstm_highpass
+python src/train.py --config configs/experiments.yaml --experiment lstm_highpass
+python src/evaluate.py --config configs/experiments.yaml --experiment lstm_highpass --split val
+python src/preprocessing_diagnostics.py --config configs/experiments.yaml --experiment lstm_highpass
+```
+
+## 7. Feature selection, if needed
+
+Train an expanded-feature model before grouped permutation importance:
+
+```powershell
+python src/train.py --config configs/experiments.yaml --experiment lstm_expanded
+python src/feature_selection.py --config configs/experiments.yaml --experiment lstm_expanded --method mrmr --count 3
+python src/feature_selection.py --config configs/experiments.yaml --experiment lstm_expanded --method permutation --count 3 --repeats 5
+python src/train.py --config configs/experiments.yaml --experiment lstm_mrmr
+python src/evaluate.py --config configs/experiments.yaml --experiment lstm_mrmr --split val
+```
+
+mRMR uses training features and training waveform-summary targets. Grouped permutation ranks a training-fitted model using validation errors, grouping flags with variables. `--count 3` means at most three groups, not necessarily three individual columns. Run the corresponding permutation-selected model in the same manner. Artifacts from another cohort are rejected.
+
+## 8. Resume and locate artifacts
+
+A run directory contains `config.json`, `feature_manifest.json`, `history.csv`, `training_metrics.json`, `best.pt` and `last.pt`. Evaluation adds `val_metrics.json`, per-record metrics and predictions. Output figures live under `outputs/<cohort>/<run>/val/`; learning curves are under `outputs/<cohort>/<run>/`.
+
+Resume the exact recorded settings:
+
+```powershell
+python src/train.py --config experiments/COHORT/RUN/config.json --resume
+```
+
+Replace `COHORT/RUN` with the actual folder shown by your configuration/output paths. Without `--resume`, existing checkpoints cause an explicit error. Resume restores optimizer, scheduler and random-generator state. A partial interrupted epoch is repeated.
+
+## 9. Increase the dataset and refresh the report
+
+1. Change counts, fractions or `subset.mode` in training.yaml.
+2. Run preprocessing and the leakage audit for the new cohort.
+3. Train each selected model manually.
+4. Evaluate on validation and run baselines.
+5. Run `python src/report.py` again.
+
+The active report is replaced with the selected cohort's findings. It is not a live document and will not update merely because YAML was edited. Old experiment folders remain separate.
+
+## 10. Final official test evaluation
+
+Only after full-population validation selection:
+
+1. Set `subset.mode: full`, prepare, audit, train and validate the desired candidates.
+2. Freeze chosen full-cohort run names, for example:
+
+```powershell
+python src/evaluate.py --freeze lstm_patient_history cnn_lstm_patient_history
+```
+
+3. Set `evaluation.allow_test: true` in the main configuration. Its selection path defaults to that full cohort's `selection.json`.
+4. Evaluate only frozen candidates, then report the test measurements:
+
+```powershell
+python src/evaluate.py --model lstm --variant patient_history --split test
+python src/evaluate.py --model cnn_lstm --variant patient_history --split test
+python src/evaluate.py --baselines --split test
+python src/report.py --split test
+```
+
+The example names are possible selections, not a claim those full-data models already exist. Fold-10 inference requires full mode, explicit permission, matching provenance and frozen checkpoint hashes. Different filter/scaler fingerprints require separate selection records. Do not use test outcomes to choose parameters.
+
+## Script responsibilities and architecture
 
 | File | Responsibility |
 | --- | --- |
-| `src/preprocessing.py` | Prepare data; `--audit` checks raw recordings |
-| `src/train.py` | Train one selected model; explicit `--resume` |
-| `src/evaluate.py` | Evaluate one checkpoint or `--baselines` |
-| `src/compare.py` | Compare completed evaluations |
-| `src/report.py` | Write documents; optional `--bundle` exports a Colab ZIP |
-| `src/run_tests.py` | Run pytest when requested |
-| `src/status.py` | Read progress and write status |
-| `src/config.py` | YAML loading and protocol definitions |
-| `src/models.py` | LSTM, CNN-LSTM and contrastive loss |
-| `.github/workflows/ci.yml` | Checks started manually from GitHub Actions |
+| `config.py` | YAML inheritance, validation, derived paths and protocol fingerprints |
+| `preprocessing.py` | Raw loading/audit, causal transforms, windows, static features, cache and DataLoaders |
+| `models.py` | LSTM/CNN-LSTM, fusion, augmentation and contrastive objective |
+| `train.py` | Optimization, validation checkpoint selection, epoch logging and resume |
+| `metrics.py` | Pure numerical waveform metrics, inverse scaling and patient bootstrap |
+| `morphology.py` | Detector-derived peak matching and QRS metrics |
+| `evaluate.py` | Explicit inference, baselines, figures and final selection freeze |
+| `compare.py` | Comparable saved runs, pending states, tables and confidence intervals |
+| `report.py` | Configuration-driven assignment report |
+| `feature_selection.py` | Optional mRMR and grouped permutation |
+| `leakage_audit.py` | Real-cache leakage checks |
+| `preprocessing_diagnostics.py` | Optional raw/filtered spectra and waveform plots |
+| `run_tests.py` | Existing pytest runner |
 
-Use `--help` on a script for its flags. `--model` (or `-model`) selects the
-architecture. `--device cpu|cuda|auto` and `--root <path>` are overrides; other
-hyperparameters belong in YAML.
+All scripts stay in `src/`. Numerical metrics do not import training or plotting. Reporting reads saved artifacts and never invokes training/inference. There is one implementation for preprocessing and one for evaluation; earlier experiment measurements remain as historical outputs.
 
-Each stage script in `src/` contains its actual implementation. Shared model
-definitions are in `src/models.py`, and configuration helpers in `src/config.py`.
-The small execution block at the end lets other scripts reuse functions without
-starting a run when they import them. There is no central dispatcher or package installation.
+## Cleanup awaiting explicit approval
 
-## 14. Optional Colab and common problems
+Automatic approval review rejected removing the following retired files, citing the risk that deleting source/configuration/document files could break references. They remain in place. The active workflow above no longer imports the retired modules or uses the earlier presets. These are proposed removals, not completed removals:
 
-For GPU use, prepare `python src/report.py --bundle --config configs/pilot.yaml`
-locally, then follow `notebooks/colab_training.ipynb`. Its training, evaluation,
-comparison and reporting cells are separate manual commands. The ZIP excludes
-the attached PDF, raw data and checkpoints. Keep GPU/CPU results separate.
+```text
+src/research.py
+src/preparation.py
+src/status.py
+configs/base.yaml
+configs/final_full.yaml
+configs/finalists.yaml
+configs/legacy_500hz.yaml
+configs/local.yaml
+configs/medium.yaml
+configs/pilot.yaml
+configs/research.yaml
+configs/selected_study.yaml
+configs/study.yaml
+Project_Documents/IMPLEMENTATION_PLAN.md
+Project_Documents/research_100hz/RESEARCH_REPORT.md
+Project_Documents/research_100hz/PRESENTATION_NOTES.md
+notebooks/assignment_walkthrough.ipynb
+notebooks/colab_training.ipynb
+requirements-tested.txt
+```
 
-| Problem | Action |
-| --- | --- |
-| Import error | Activate the environment, install `requirements.txt`, and run `python src/<script>.py` from the project root |
-| Missing metadata/waveforms | Check `data.root` and the raw folder layout |
-| Missing manifest | Prepare full cache, then subset cache |
-| Cache protocol mismatch | Use matching settings/cache; preprocess a new cache when changing geometry or cohort |
-| Saved run already exists | Explicitly resume or choose new output paths |
-| Configuration changed | Restore original settings for resume; use fresh paths for changed settings |
-| No selected checkpoint | Train that model/variant first |
-| No comparison results | Evaluate selected models first |
-| CUDA unavailable | Use `--device cpu` |
-| Another job active | Wait for the current writer before starting another |
-
-Read the [existing assignment report](ASSIGNMENT_REPORT.md) for measured findings
-and [presentation notes](PRESENTATION_NOTES.md) for the class explanation.
+The current preprocessing/evaluation/comparison/report implementations and tests were updated to use the two active configs. Legacy training-selection compatibility remains. Reversible source/document/notebook copies exist in `.cache/before_cleanup.zip`; historical reports, the latest legacy presentation, configuration text and tested dependency versions were also copied to the existing historical result folders. Raw data, caches, experiments and measured CSV/PNG artifacts are not proposed for removal.
