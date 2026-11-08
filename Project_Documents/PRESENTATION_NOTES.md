@@ -1,6 +1,6 @@
 ﻿# Presentation notes: current project
 
-Use the active assignment report for current patient counts and measured values. Do not copy scores from historical slides into the larger-cohort results. The latest refactor has not been run or tested; training/evaluation for the selected larger cohort is pending.
+Use the active assignment report for current patient counts and measured values. Do not copy scores from historical slides into the larger-cohort results. The expanded candidate passed 60 software tests, its real-cache audit, and training/inference batch checks. Expanded-cohort neural training/evaluation remain pending.
 
 ## 1. Research question
 
@@ -8,7 +8,7 @@ Use the active assignment report for current patient counts and measured values.
 
 ## 2. Data and preprocessing
 
-“Our main configuration selects 1,500 training, 300 validation and 100 reserved test patients. Whole patients stay within official folds. Multiple training windows are allowed; validation and test use one window per recording. Scaling and imputation fit training data only. Current-record diagnoses never become historical inputs.”
+“Our main configuration selects 4,500 training, 600 validation and 100 reserved test patients. Whole patients stay within official folds. There are 15,579 training windows from 5,193 recordings, 677 validation recordings and 114 reserved test recordings. Validation and test use one window per recording. Scaling and imputation fit training data only. Current-record diagnoses never become historical inputs.”
 
 “Native 100 Hz reduces the sequence length compared with 500 Hz, making longer observed context practical. It also has coarser temporal resolution; it is not a claim of better clinical signal quality. Five hundred observed samples at 100 Hz represent five seconds.”
 
@@ -48,7 +48,7 @@ f_t = sigmoid(W_f z_t + b_f)       forget gate
 
 ## 5. Training and comparisons
 
-“The configured starting model uses hidden size 64, one LSTM layer, dropout 0.2, batch size 64 and learning rate 0.001. The budget is 60 epochs, with early stopping disabled. These settings came from exploratory development; their suitability on the larger cohort must be measured.”
+“The updated candidate uses hidden size 128, two LSTM layers, dropout 0.2, a 128-unit forecast head, batch size 64 and learning rate 0.0005. Weight decay is 0.0005. Training has a maximum of 60 epochs, a plateau learning-rate scheduler, and early stopping after ten non-improving epochs. The larger recurrent encoder and smaller head reduce total parameter count. The previous models selected epochs 12 and 25; extra epochs worsened validation error. The new settings still need measured validation.”
 
 “We compare the same architecture with different feature sets and compare LSTM versus CNN-LSTM with the same features, patients and windows. Contrastive learning adds agreement between two augmented observed views. It excludes same-patient negatives and does not use future ECG as an input.”
 

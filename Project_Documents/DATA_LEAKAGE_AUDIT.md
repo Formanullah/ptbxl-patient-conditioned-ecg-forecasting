@@ -2,9 +2,11 @@
 
 ## Current verification status
 
-**The recent refactor has not been executed or tested, as requested.** The 1,500/300/100-patient cohort was prepared before the instruction to stop execution. Its post-cleanup leakage audit, training and evaluation remain pending.
+**The software suite passed 60 tests after updating the configuration.** The new 4,500/600/100-patient cohort was prepared and its real-cache leakage audit passed all ten checks, including patient/record/window isolation, training-only statistics, future-mutation invariance and blocked fold-10 evaluation. It contains 5,193 / 677 / 114 recordings and 15,579 / 677 / 114 windows. The machine record is `outputs/custom_100hz_5s_3s_b088aaf9/leakage_audit.json`.
 
-Do not describe the latest refactor as passing all checks until you explicitly run them. The commands are in the run guide; no commands in this document were executed as part of the final cleanup.
+Both updated architectures passed one real-data training optimizer step and validation-batch inference with finite outputs/gradients. These checks verify execution, not forecast accuracy. Expanded-cohort neural training/evaluation remain pending. Test patients have not been evaluated. Existing repository-wide lint/formatting findings are separate from the passing software tests.
+
+The previous 1,500/300/100 cohort also passed its audit and completed two 60-epoch runs plus validation/baseline evaluation. Its settings and measured report are retained separately; those scores are not evidence for the new cohort.
 
 ## Controls and tests to run
 
@@ -23,7 +25,7 @@ Do not describe the latest refactor as passing all checks until you explicitly r
 | Stale checkpoint evaluation | Reporting excludes evaluation hashes that no longer match the selected checkpoint |
 | Resume consistency | Save optimizer, scheduler, random-generator and DataLoader generator states |
 
-Relevant tests remain in `tests/test_pipeline.py`; `tests/test_reporting.py` adds changing-cohort, pending-state, stale-score and matched-comparison checks. They have been edited/written but not run after this refactor.
+Relevant passing tests are in `tests/test_pipeline.py` and `tests/test_reporting.py`, including changing-cohort, pending-state, stale-score and matched-comparison checks. Five warnings came from upstream WFDB/Pandas deprecated inplace operations.
 
 ## Historical evidence
 

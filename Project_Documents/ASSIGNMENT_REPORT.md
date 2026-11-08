@@ -1,73 +1,90 @@
-﻿# Patient-conditioned ECG forecasting — current assignment report
+# Patient-conditioned ECG forecasting: assignment report
 
-## Current status
+Generated from saved artifacts at 2026-11-08T23:32:19+00:00 (UTC).
 
-This document is a manually updated status snapshot. The configuration-driven report generator has been edited but **has not been run after the cleanup**, following your instruction not to execute code. Model performance for the larger cohort is pending.
+## Current configuration and execution state
 
-## Selected protocol and dataset
+Requested cohort: **train: 4500 patients, val: 600 patients, test: 100 patients**
 
-- PTB-XL native 100 Hz; all twelve leads.
-- Five seconds observed → three seconds predicted: 500 input samples and 300 target samples.
-- Whole-patient selection within official folds 1–8 / 9 / 10.
-- Main configuration: `configs/training.yaml`.
-- Requested patients: 1,500 train / 300 validation / 100 reserved test.
-- No additional input filter; training-input median/IQR scaling.
+Protocol: **100 Hz**, **5 seconds observed → 3 seconds forecast**, twelve leads. Input/target lengths: **500 / 300 samples**; layout: `time_first`.
 
-The cohort was prepared before the stop-execution instruction:
+Preprocessing: `none` filter; `robust` scaling. Seed: 42. Configured maximum: 60 epochs. Early stopping: True.
 
-| Split | Patients | Recordings | Forecast windows |
-| --- | ---: | ---: | ---: |
-| Training | 1,500 | 1,731 | 5,193 |
-| Validation | 300 | 336 | 336 |
-| Reserved test | 100 | 114 | 114 |
+Cache: `data/custom_100hz_5s_3s_b088aaf9/6ba08ad4`. Experiments: `experiments/custom_100hz_5s_3s_b088aaf9`. [Exact report configuration](../outputs/custom_100hz_5s_3s_b088aaf9/report_config.json).
 
-Training uses three valid windows per recording with a one-second stride. Validation/test each use one configured window per recording. The reserved test subset has not been evaluated.
+**Data prepared.** Actual cohort counts:
 
-## Execution state
+| split | patients | records | windows |
+| --- | --- | --- | --- |
+| train | 4500 | 5193 | 15579 |
+| val | 600 | 677 | 677 |
+| test | 100 | 114 | 114 |
 
-| Stage | State |
+Manifest fingerprint: `45e071a2fd98ed4ebfb1b2af3c41b0b3f7a45ca2d95f9a29dca370b2a7a64554`. Preparation took 43.3 recorded seconds.
+
+Completed comparable **val evaluations: 1**. No measurements from a different cohort/window protocol are inserted into this report.
+
+| run | state |
 | --- | --- |
-| Larger cohort preprocessing | Completed before the no-execution instruction |
-| Leakage audit for the larger cohort | Pending |
-| Tests/lint after cleanup | Not run, as requested |
-| LSTM/CNN-LSTM training for this cohort | Pending |
-| Validation waveform/QRS evaluation | Pending |
-| Baseline evaluation for this cohort | Pending |
-| Final full-population testing | Pending; the current cohort is a development subset |
+| cnn_lstm_patient_history | val evaluated |
 
-No previous small-cohort score is presented as a score for this larger cohort.
+## Methods and leakage controls
 
-## Methods and configuration
+Official folds 1–8 train, fold 9 validates, and fold 10 is reserved for explicit final evaluation. Selection is by whole patient, retaining their eligible recordings. Training alone is shuffled. Training can use overlapping windows; validation/test use one configured window per recording.
 
-Models compare ECG-only, demographics, strictly prior diagnostic history and optional contrastive learning. Expanded-feature and feature-selection comparisons are optional. Age imputation, waveform scaling and feature statistics use training records/windows only. Age 300 is missing; missingness flags remain explicit. Current/equal-time diagnoses are excluded from history. Observed ECG alone supplies heart-rate and RR features.
+Waveform scaling, age imputation and expanded-feature transforms fit training inputs only. The age-300 sentinel is missing. Sex has an unknown encoding and a missingness flag. Historical diagnoses use strictly earlier timestamps; current/equal-time labels are excluded. Heart-rate and RR features see observed samples only. Causal filters operate on the observed window; future targets remain unfiltered physical voltages, affine-scaled for training.
 
-The current model settings are hidden size 64, one recurrent layer, dropout 0.2, static embedding 16 and a 256-unit forecast head. CNN-LSTM uses temporal kernels 7/5/3 and average pooling by two. AdamW uses learning rate 0.001, weight decay 0.0001, batch size 64 and gradient clipping 1.0. The configured budget is 60 epochs with early stopping disabled. These are development starting choices; no larger-cohort optimum has been established.
+Feature choices: ECG-only (0 static values), demographics (4), prior history (10), expanded (22), or groups chosen by training-only mRMR / validation grouped permutation importance. Missingness flags remain with their features. All models retain twelve ECG leads.
 
-The best checkpoint is selected by validation patient-macro MAE in original mV. Evaluation will report voltage errors, R², per-lead Pearson, subgroup and horizon errors, and detector-based peak measures. QRS locations are algorithmic estimates, not cardiologist annotations. Low MAE alone does not establish useful cardiac forecasting.
+LSTM summarizes the observed sequence with recurrent gates. CNN-LSTM first applies three temporal convolutions and average pooling, then an LSTM. Late fusion joins the temporal state and static embedding at the forecast head; early fusion broadcasts the embedding before the temporal encoder. Contrastive learning uses observed-only augmented views and excludes same-patient negatives.
 
-## How this report updates
+Training uses AdamW and gradient clipping. Checkpoints are selected using validation patient-macro MAE in mV. The supplied settings are practical development choices, not proven optima for every cohort. best.pt and last.pt have different purposes: selected inference weights versus resumable final state.
 
-When you choose to run the project:
+## Metrics and measured comparison
 
-1. Run the tests, preprocessing and leakage audit.
-2. Train each desired model manually.
-3. Evaluate it explicitly on validation patients and run the baselines.
-4. Run `python src/report.py`.
+MAE/RMSE are mV; MSE is mV². Patient-macro MAE averages within patients, then equally across patients. R² uses one global target mean. Pearson is computed per lead; undefined values remain null. QRS scores compare WFDB XQRS detections on lead II with one-to-one matching within the configured tolerance. They are detector proxies, not expert annotations; timing/amplitude results can be affected by misplaced detections. Clinical usefulness is not established by voltage error.
 
-The generator reads the selected configuration, actual cache manifest, saved run settings, histories and evaluation files. It replaces this active report with the matching cohort's measured tables, findings, confidence intervals and figures. A changed cohort or window geometry receives separate cache/result paths. Missing measurements remain pending; reporting does not train or run inference.
+| run | model | variant | patient_macro_mae | mae | rmse | mse | r2 | pearson_mean | qrs_f1 | peak_timing_mae_ms | parameters |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cnn_lstm_patient_history | cnn_lstm | patient_history | 0.103743 | 0.104373 | 0.214096 | 0.045837 | 0.056852 | 0.255654 | 0.010695 | 23.125000 | 764704 |
 
-Merely changing YAML does not update a Markdown document. Report generation is an explicit manual step. See the [run guide](CONFIGURATION_AND_RUN_GUIDE.md).
+## Executed settings and budgets
 
-## Historical evidence, kept separate
+| run | filter | scaling | fusion | hidden | depth | dropout | batch_size | lr | epoch_budget | actual_epochs | best_epoch | final_val_patient_macro_mae | runtime_seconds |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cnn_lstm_patient_history | none | robust | late | 128 | 2 | 0.200000 | 64 | 0.000500 | 60 | 60 | 35 | 0.104124 | 4290.172204 |
 
-The original 500 Hz assignment is preserved in [its result folder](../outputs/pilot/ASSIGNMENT_REPORT.md). The completed tiny 100 Hz development study is preserved in [its historical report](../outputs/research_100hz_dev/RESEARCH_REPORT.md). Their data populations and/or forecasting geometry differ from the current configuration.
+## Findings from this cohort
 
-The earlier neural forecasts often had low-amplitude outputs and poor R-peak preservation; a constant training-median baseline had lower MAE. Increasing data size is a new experiment, not a guarantee this limitation will disappear. The raw-data audit previously checked all 21,799 native 100 Hz recordings without invalid records. That audit and the earlier 52-test pass are historical evidence, not validation of the latest refactor.
+- Lowest measured neural validation patient-macro MAE: **cnn_lstm_patient_history**, **0.103743 mV**. This is a descriptive validation minimum, not a global optimum.
+
+## Paired uncertainty
+
+Paired bootstrap resamples patients; differences are B minus A. Negative favors B. These are descriptive intervals after validation selection, with one seed and no multiplicity correction. Check the saved run settings before interpreting a difference as an isolated architecture/feature effect.
+
+No completed measurements for this configuration.
+
+## Figures and detailed artifacts
+
+![Current cohort comparison](../outputs/custom_100hz_5s_3s_b088aaf9/val_comparison.png)
+
+- **cnn_lstm_patient_history**: [evaluation artifacts](../outputs/custom_100hz_5s_3s_b088aaf9/cnn_lstm_patient_history/val).
+
+![cnn_lstm_patient_history: learning_curves](../outputs/custom_100hz_5s_3s_b088aaf9/cnn_lstm_patient_history/learning_curves.png)
+
+
+![cnn_lstm_patient_history: forecast_median_error](../outputs/custom_100hz_5s_3s_b088aaf9/cnn_lstm_patient_history/val/forecast_median_error.png)
+
+## Limitations and next actions
+
+Inspect waveform and QRS plots alongside scalar errors. One seed and repeated validation choices limit conclusions. Overlapping training windows are correlated. Prior-record labels are a proxy for clinically available history. Historical 500 Hz/short-horizon results and the earlier tiny 100 Hz development cohort use different protocols/populations and are not copied into this comparison.
+
+After changing dataset settings, prepare and audit that cohort, train each desired model, evaluate on validation, and regenerate this report. Reporting refreshes only when explicitly requested. For final testing, use full mode, select with full validation, freeze checkpoint hashes and explicitly enable test access. See [the run guide](CONFIGURATION_AND_RUN_GUIDE.md).
 
 ## References
 
-- [PTB-XL v1.0.3](https://physionet.org/content/ptb-xl/1.0.3/)
-- [SciPy SOS filtering](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sosfilt.html)
-- [WFDB XQRS processing](https://wfdb.readthedocs.io/en/latest/processing.html)
-
-The private manuscript remains local and excluded from repository/Colab transfers. Its short literature comparison remains in the historical assignment report; different protocols prevent a direct numerical superiority claim.
+- [PTB-XL v1.0.3 and official fold guidance](https://physionet.org/content/ptb-xl/1.0.3/)
+- [SciPy causal SOS filtering](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.sosfilt.html)
+- [WFDB processing and XQRS](https://wfdb.readthedocs.io/en/latest/processing.html)
+- [Peng et al., mRMR (2005)](https://doi.org/10.1109/TPAMI.2005.159)
+- Private-manuscript literature values remain in the archived original assignment report. Different splits, scaling, sampling rates and horizons prevent direct numerical superiority claims.
