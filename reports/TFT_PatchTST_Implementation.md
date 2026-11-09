@@ -47,7 +47,7 @@ Both models were evaluated on an identical, strictly disjoint patient cohort und
 
   * Optimizer: AdamW ($\text{lr} = 10^{-3}$, weight decay $= 10^{-4}$, gradient clipping at $0.1$).
 
-  * Training Budget: $\text{MAX\_EPOCHS} = 40$, Early Stopping $\text{patience} = 8$.
+  * Training Budget: `MAX_EPOCHS = 40`, Early Stopping `patience = 8`.
 
 ## 3. Architectural Implementations
 
