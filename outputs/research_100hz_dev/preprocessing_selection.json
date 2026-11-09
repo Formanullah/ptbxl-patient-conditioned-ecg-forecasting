@@ -1,0 +1,37 @@
+{
+  "objective": "validation patient-macro MAE in original mV",
+  "used_test": false,
+  "measurements": {
+    "p0_lstm": {
+      "patient_macro_mae": 0.11009771167798721,
+      "mae": 0.10864155119709011,
+      "rmse": 0.23165257144302587,
+      "qrs_f1": 0.0,
+      "checkpoint_sha256": "26d63a2ca34f1be0d78a6030f3df722c362768722570022c51e15e340308352e"
+    },
+    "p1_lstm": {
+      "patient_macro_mae": 0.11017188020578972,
+      "mae": 0.10871815040946425,
+      "rmse": 0.23197168398531332,
+      "qrs_f1": 0.0,
+      "checkpoint_sha256": "b066200826e63227ec6f326ef5091b2e18695f8304d89fc726070843210a00b5"
+    },
+    "p2_lstm": {
+      "patient_macro_mae": 0.1101796881962851,
+      "mae": 0.10872545903983584,
+      "rmse": 0.23196780758909813,
+      "qrs_f1": 0.0,
+      "checkpoint_sha256": "e23e98b85800f18242a395f4b9423cfa42e1d680becab7eb7de9d41ddacae0a8"
+    },
+    "p3_lstm": {
+      "patient_macro_mae": 0.10793120547838009,
+      "mae": 0.10649556345629324,
+      "rmse": 0.23220527465348156,
+      "qrs_f1": 0.0,
+      "checkpoint_sha256": "9506da5c437994a5843e6afc55221f9e54e934a8c6b433da11da99360aab2b8d"
+    }
+  },
+  "chosen_filter": "none",
+  "chosen_scaling": "robust",
+  "P4_alias": "P3: best filter is none and best scaler robust, so combined configuration is identical; no duplicate training claimed"
+}

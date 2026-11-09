@@ -1,0 +1,12 @@
+extends: research.yaml
+profile: research_100hz_medium
+data:
+  cache: data/research_100hz_medium_p0
+subset:
+  mode: medium
+  seed: 42
+  patients: {train: 1500, val: 300, test: 100}
+paths:
+  experiments: experiments/research_100hz_medium
+  outputs: outputs/research_100hz_medium
+  documents: Project_Documents/research_100hz_medium
