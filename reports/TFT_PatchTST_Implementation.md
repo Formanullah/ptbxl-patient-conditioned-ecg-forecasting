@@ -90,24 +90,26 @@ $$
 
 ### 4. Forecast Visualizations & Diagnostics
 
+### 4. Forecast Visualizations & Diagnostics
+
 #### Error Degradation Across Forecast Horizon
-![Error Degradation Horizon](figures/fig1_error_degradation_horizon.png)
+![Error Degradation Horizon](../reports/figures/fig1_error_degradation_horizon.png)
 *Figure 1: Lead-averaged MAE across the 3.0 s forecast horizon comparing Persistence, Training Median, and PatchTST.*
 
 #### PatchTST 12-Lead Simultaneous Spatial Co-Registration
-![PatchTST 12-Lead Spatial Grid](figures/fig2_12lead_spatial_grid.png)
+![PatchTST 12-Lead Spatial Grid](../reports/figures/fig2_12lead_spatial_grid.png)
 *Figure 2: Simultaneous 12-lead forecast versus ground truth for PatchTST on validation window 0.*
 
 #### TFT 12-Lead Simultaneous Spatial Co-Registration
-![TFT 12-Lead Spatial Grid](figures/fig3_tft_12lead_spatial_grid.png)
+![TFT 12-Lead Spatial Grid](../reports/figures/fig3_tft_12lead_spatial_grid.png)
 *Figure 3: Simultaneous 12-lead forecast versus ground truth for TFT on validation window 0, demonstrating multi-channel amplitude flattening.*
 
 #### Lead II Trajectory: Ground Truth vs. TFT
-![Lead II TFT Overlay](figures/fig4_lead2_tft_vs_truth.png)
+![Lead II TFT Overlay](../reports/figures/fig4_lead2_tft_vs_truth.png)
 *Figure 4: Single-lead (Lead II) overlay demonstrating TFT's collapse toward the global median line.*
 
 #### Head-to-Head Model Comparison
-![Model Comparison Benchmark](figures/fig5_model_comparison_benchmark.png)
+![Model Comparison Benchmark](../reports/figures/fig5_model_comparison_benchmark.png)
 *Figure 5: Direct benchmark comparison between PatchTST and TFT on forecast horizon degradation (left) and Lead II trajectory morphology (right).*
 
 ---
