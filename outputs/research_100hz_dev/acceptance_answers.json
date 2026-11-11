@@ -1,0 +1,70 @@
+[
+  {
+    "Question": "1. Leakage-safe?",
+    "Measured answer": "Implemented isolation, train-only fitting and future-mutation checks pass; see audit and remaining limitations. This is bounded evidence, not an absolute guarantee."
+  },
+  {
+    "Question": "2. Configurable 100 Hz pipeline?",
+    "Measured answer": "Working on real selected patients; pilot/medium/full/custom selection, seconds-based windows, time-first batches and streamed caches are implemented. Full model training remains pending."
+  },
+  {
+    "Question": "3. Best preprocessing?",
+    "Measured answer": "P3 no filter + robust scaling: MAE 0.107931 vs P0 0.110098. P3 RMSE 0.232205 vs P0 0.231653; the primary MAE improves but RMSE does not."
+  },
+  {
+    "Question": "4. Is filtering worthwhile?",
+    "Measured answer": "No demonstrated benefit: high-pass MAE 0.110172; bandpass 0.110180. Retain no additional filter. P4 aliases P3."
+  },
+  {
+    "Question": "5. Best feature selector?",
+    "Measured answer": "mRMR MAE 0.107940, permutation 0.107973, expanded 0.107998. mRMR is nominally lower and uses six static values; permutation uses four. Changes are tiny, not a robust clinical result."
+  },
+  {
+    "Question": "6. Does early fusion help?",
+    "Measured answer": "LSTM late/early: 0.107972/0.107924. CNN late/early: 0.107952/0.107904. Differences are below the declared near-equivalence tolerance; no strong advantage established."
+  },
+  {
+    "Question": "7. Longer history?",
+    "Measured answer": "See target-aligned comparisons below. Both forecasts in a pair use the same actual future. Unaligned start-zero results cannot answer this question directly."
+  },
+  {
+    "Question": "8. Better QRS predictions?",
+    "Measured answer": "Best neural-by-MAE QRS F1=0.000000; repeated-window F1=0.429688. Better voltage error does not establish morphology preservation."
+  },
+  {
+    "Question": "9. Best learning rate?",
+    "Measured answer": "Matched conditioned LSTM screening nominally favors 0.0005; CNN screening 0.0001. Differences are small; these are not global optima."
+  },
+  {
+    "Question": "10. Preferred model dimensions?",
+    "Measured answer": "Near-equivalent screening favors the simpler ECG-only hidden-64, depth-1, dropout-0.2, batch-64 candidates. Other dimension/depth/dropout/batch measurements remain in the CSV; static embedding is inactive in ECG-only."
+  },
+  {
+    "Question": "11. 60 or 100 epochs?",
+    "Measured answer": "LSTM selected MAE: 0.107931/0.107931; CNN: 0.107849/0.107849. Best selected checkpoints remain early; complete budgets are recorded. Equal best performance favors the smaller execution budget, not a claim that 100 epochs improves accuracy."
+  },
+  {
+    "Question": "12. Improved LSTM vs original?",
+    "Measured answer": "Selected LSTM-60 MAE 0.107931; original architecture eight-epoch MAE 0.107866. No convincing improvement; budgets differ and full-data matched-budget evaluation is pending."
+  },
+  {
+    "Question": "13. Improved CNN-LSTM vs original?",
+    "Measured answer": "Selected CNN-60 MAE 0.107849; original architecture eight-epoch MAE 0.107876. Tiny descriptive difference; full-data matched-budget evaluation is pending."
+  },
+  {
+    "Question": "14. Neural vs baselines?",
+    "Measured answer": "Nominal best neural cnn_100 MAE 0.107849; persistence 0.162705, repeat-window 0.157527, training-median constant 0.107705. Neural models beat the two required voltage baselines, but not the diagnostic constant baseline."
+  },
+  {
+    "Question": "15. Which complexity is justified?",
+    "Measured answer": "No large architecture/conditioning benefit is established. Robust scaling improves the primary metric modestly; filtering adds distortion/cost without a demonstrated gain. Sparse feature selection reduces only a small part of total model parameters."
+  },
+  {
+    "Question": "16. Negative results?",
+    "Measured answer": "Residual head MAE 0.152295; auxiliary losses, extra capacity, contrastive learning and prolonged training did not demonstrate robust benefits. Report all rows and final-epoch metrics, not only favorable runs."
+  },
+  {
+    "Question": "17. Final configuration?",
+    "Measured answer": "Development candidates: no filter, robust scaling, 100 Hz 5-to-3 seconds, ECG-only hidden 64/depth 1/dropout 0.2/batch 64/lr 0.001. Full-data validation selection and official testing remain pending. The lower-MAE constant median reference must remain in the final benchmark."
+  }
+]

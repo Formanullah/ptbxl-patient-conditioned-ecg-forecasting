@@ -1,0 +1,128 @@
+{
+  "method": "permutation",
+  "fingerprint": "cdf7072d8cc86c1833095529c1bc63f970e8a676b6839a874f7d74d5ea99c442",
+  "selected_groups": [
+    "age",
+    "rr_mean"
+  ],
+  "selected_features": [
+    "age_scaled",
+    "age_missing",
+    "rr_mean",
+    "rr_mean_missing"
+  ],
+  "ranking": [
+    {
+      "group": "age",
+      "importance_mV": 5.41219804296722e-06,
+      "repeat_std_mV": 2.764519283859337e-06,
+      "repeats": 5,
+      "rank": 1
+    },
+    {
+      "group": "rr_mean",
+      "importance_mV": 3.926396373363228e-06,
+      "repeat_std_mV": 3.1627096707962274e-06,
+      "repeats": 5,
+      "rank": 2
+    },
+    {
+      "group": "history",
+      "importance_mV": -4.007342744860587e-07,
+      "repeat_std_mV": 0.0,
+      "repeats": 5,
+      "rank": 3
+    },
+    {
+      "group": "bmi",
+      "importance_mV": -2.3298582349978724e-06,
+      "repeat_std_mV": 2.271332259633771e-06,
+      "repeats": 5,
+      "rank": 4
+    },
+    {
+      "group": "sex",
+      "importance_mV": -4.274833558973179e-06,
+      "repeat_std_mV": 3.0990960131529843e-06,
+      "repeats": 5,
+      "rank": 5
+    },
+    {
+      "group": "height",
+      "importance_mV": -7.541230899807405e-06,
+      "repeat_std_mV": 2.240058939581345e-06,
+      "repeats": 5,
+      "rank": 6
+    },
+    {
+      "group": "weight",
+      "importance_mV": -8.27666195222232e-06,
+      "repeat_std_mV": 1.57910399055772e-06,
+      "repeats": 5,
+      "rank": 7
+    },
+    {
+      "group": "rr_std",
+      "importance_mV": -8.44981274235601e-06,
+      "repeat_std_mV": 3.266767538638141e-06,
+      "repeats": 5,
+      "rank": 8
+    },
+    {
+      "group": "heart_rate",
+      "importance_mV": -1.1570281282435868e-05,
+      "repeat_std_mV": 7.540525825999166e-06,
+      "repeats": 5,
+      "rank": 9
+    }
+  ],
+  "groups": {
+    "age": [
+      "age_scaled",
+      "age_missing"
+    ],
+    "sex": [
+      "sex_encoded",
+      "sex_missing"
+    ],
+    "history": [
+      "prior_NORM",
+      "prior_MI",
+      "prior_STTC",
+      "prior_CD",
+      "prior_HYP",
+      "history_missing"
+    ],
+    "height": [
+      "height",
+      "height_missing"
+    ],
+    "weight": [
+      "weight",
+      "weight_missing"
+    ],
+    "bmi": [
+      "bmi",
+      "bmi_missing"
+    ],
+    "heart_rate": [
+      "heart_rate",
+      "heart_rate_missing"
+    ],
+    "rr_mean": [
+      "rr_mean",
+      "rr_mean_missing"
+    ],
+    "rr_std": [
+      "rr_std",
+      "rr_std_missing"
+    ]
+  },
+  "fitted_split": "validation ranking of training-fitted model",
+  "source_checkpoint": "experiments\\research_100hz_dev\\lstm_expanded\\best.pt",
+  "checkpoint_sha256": "e40325bd60a895426dbb1aa033afccf8caa2b41d9878eb5d5d2b647fc1950e7d",
+  "baseline_patient_macro_mae_mV": 0.10799849261972466,
+  "used_test": false,
+  "permutation_unit": "patient donors; joint group and flags; first donor record",
+  "interpretation": "conditional predictive association, not causal; correlated features can substitute"
+}

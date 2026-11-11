@@ -1,0 +1,24 @@
+{
+  "ecg_id": 502,
+  "fingerprint": "d16573c467c26b86c574712aafdb36228be0832b0f3f7682f59677744b856ce6",
+  "split": "train",
+  "filter": {
+    "filter": "bandpass",
+    "scaling": "zscore",
+    "order": 4,
+    "low_hz": 0.5,
+    "high_hz": 40.0
+  },
+  "qrs_detector_comparison": {
+    "tp": 0,
+    "fp": 7,
+    "fn": 0,
+    "precision": 0.0,
+    "recall": null,
+    "f1": 0.0
+  },
+  "detector_failures": 0,
+  "matched_timing_mae_ms": null,
+  "removed_rms_mV": 0.2353321611881256,
+  "note": "Removed components are not verified noise; causal phase delay is retained."
+}

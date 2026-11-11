@@ -1,0 +1,41 @@
+# Optional named comparisons. Inherits the dataset and optimizer from training.yaml.
+# Run only the experiment you choose: --config configs/experiments.yaml --experiment NAME
+extends: training.yaml
+experiment: {architecture: lstm, variant: patient_history}
+experiments:
+  lstm_ecg_only:
+    experiment: {variant: ecg_only}
+  lstm_demographics:
+    experiment: {variant: demographics}
+  lstm_patient_history: {}
+  lstm_patient_history_contrastive:
+    experiment: {variant: patient_history_contrastive}
+  cnn_lstm_ecg_only:
+    experiment: {architecture: cnn_lstm, variant: ecg_only}
+  cnn_lstm_demographics:
+    experiment: {architecture: cnn_lstm, variant: demographics}
+  cnn_lstm_patient_history:
+    experiment: {architecture: cnn_lstm}
+  cnn_lstm_patient_history_contrastive:
+    experiment: {architecture: cnn_lstm, variant: patient_history_contrastive}
+  lstm_early:
+    model: {fusion: early}
+  cnn_lstm_early:
+    experiment: {architecture: cnn_lstm}
+    model: {fusion: early}
+  lstm_expanded:
+    experiment: {variant: expanded}
+  lstm_mrmr:
+    experiment: {variant: mrmr}
+  lstm_permutation:
+    experiment: {variant: permutation}
+  lstm_zscore:
+    preprocessing: {scaling: zscore}
+  lstm_highpass:
+    preprocessing: {filter: highpass}
+  lstm_bandpass:
+    preprocessing: {filter: bandpass}
+  lstm_hidden_128:
+    model: {hidden: 128}
+  lstm_lr_0005:
+    training: {lr: 0.0005}
