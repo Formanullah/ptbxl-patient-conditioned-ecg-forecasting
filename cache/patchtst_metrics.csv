@@ -1,0 +1,2 @@
+Model,Params,Val_MAE_mV,Val_RMSE,Delta_MAE_vs_Median_mV,CI_95_Low,CI_95_High,Temporal_Std_mV
+PatchTST,38217,0.110875,0.254296,-0.002884,-0.00548,-0.000639,0.00728
