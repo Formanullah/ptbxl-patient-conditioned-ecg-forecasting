@@ -1,11 +1,14 @@
-# Python 3.11 or newer. Install after activating .venv.
-torch>=2.1
-numpy>=1.24
-pandas>=2.0
-matplotlib>=3.7
-wfdb>=4.1
-scipy>=1.11
-PyYAML>=6
-filelock>=3
-pytest>=8
-ruff>=0.9
+# Python 3.11+. Colab retains its installed CUDA-enabled PyTorch when compatible.
+torch>=2.1,<3
+numpy>=1.24,<3
+pandas>=2.0,<4
+matplotlib>=3.7,<4
+wfdb>=4.1,<5
+scipy>=1.11,<2
+PyYAML>=6,<7
+filelock>=3,<4
+pytest>=8,<10
+ruff>=0.9,<1
+nbformat>=5.10,<6
+nbclient>=0.10,<1
+ipykernel>=6.29,<8

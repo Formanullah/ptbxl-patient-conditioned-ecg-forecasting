@@ -23,3 +23,6 @@ __pycache__/
 *colab_bundle.zip
 # Reversible local cleanup archives and future transfer bundles.
 *.zip
+
+/results/
+/notebooks/*executed*.ipynb

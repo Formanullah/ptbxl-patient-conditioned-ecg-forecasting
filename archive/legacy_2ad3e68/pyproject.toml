@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+cache_dir = ".cache/pytest"
+addopts = "--basetemp=.cache/test-temp"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+cache-dir = ".cache/ruff"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
