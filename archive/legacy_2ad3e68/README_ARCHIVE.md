@@ -24,3 +24,9 @@ context-length and preprocessing studies also retain their own protocols.
 Some old active documentation references expanded-cohort artifacts absent from
 this checkout. Those claims cannot be independently reproduced from the available
 files and are not inserted into new comparisons.
+
+The earlier exploratory notebook, slide decks, and slide builder are also in
+this archive. The exploratory notebook's generated figures and tables are still
+under `ptbxl_eda_outputs/` at the main project root. To rerun it from the archive,
+set `BASE_DIR` to your dataset and choose a separate `OUTPUT_DIR` so the original
+figures and tables stay intact.
