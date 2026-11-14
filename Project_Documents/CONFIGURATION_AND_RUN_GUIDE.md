@@ -1,6 +1,6 @@
 ﻿# Configuration and run guide
 
-Use this guide in order. Every command is manual. The recent cleanup/refactor has not been run or tested because you requested no code execution.
+Use this guide in order. Every command selects one stage/model. The main configuration is an expanded development candidate; its accuracy requires retraining. The previous 1,500/300/100 run passed 60 tests and its real-cache leakage audit, and its measured report is archived with that cohort's outputs.
 
 ## 1. Set up the environment
 
@@ -28,7 +28,7 @@ data:
 subset:
   mode: custom
   seed: 42
-  patients: {train: 1500, val: 300, test: 100}
+  patients: {train: 4500, val: 600, test: 100}
 ```
 
 - `root`: the folder containing metadata and native `records100/` waveforms.
@@ -56,7 +56,7 @@ python src/leakage_audit.py
 
 `leakage_audit.py` checks patient/record/window separation, train-only statistics and future-mutation invariance. This is required again for a changed cohort. An optional complete raw-waveform audit is `python src/preprocessing.py --audit`; it scans the raw metadata population, not only the selected subset.
 
-The 1,500/300/100 cohort was prepared before the stop-execution instruction: 1,731 / 336 / 114 recordings and 5,193 / 336 / 114 windows. The refactored implementation and that cohort's leakage audit have not subsequently been run.
+The previous 1,500/300/100 cohort contained 1,731 / 336 / 114 recordings and 5,193 / 336 / 114 windows. Its tests, leakage audit, two 60-epoch model runs and validation/baseline evaluations completed successfully. `configs/reference_1500.yaml` preserves those settings. The expanded cohort receives separate cache/result paths; use its own manifest for measured counts.
 
 ## 4. Train one model
 
@@ -65,6 +65,8 @@ python src/train.py --model lstm --variant patient_history
 ```
 
 This trains only that model. Training reads training/validation loaders, saves epoch metrics, selects `best.pt` using validation patient-macro MAE in mV, and saves resumable `last.pt`. It does not run the final test evaluation or automatically train other models.
+
+Updated candidate settings: hidden size 128, depth 2, dropout 0.2, static embedding 16, head width 128; AdamW learning rate 0.0005 and weight decay 0.0005; batch size 64. The epoch cap stays 60, with early stopping after 10 non-improving epochs. The plateau scheduler halves the learning rate after six non-improving validation epochs. This provides a lower-rate training opportunity before early stopping. Checkpoint selection remains validation patient-macro MAE in mV. Increased capacity and patient counts do not guarantee heartbeat preservation.
 
 Choose `--model lstm` or `--model cnn_lstm` and one variant:
 
@@ -110,11 +112,11 @@ Settings belong to these sections:
 | `contrastive` | Weight, temperature, jitter, gain range |
 | `evaluation` | Bootstrap count, peak tolerance, final-test permission |
 
-Use the optional `configs/experiments.yaml` for named changes. For example, `lstm_hidden_128` changes hidden size and `lstm_lr_0005` changes learning rate. These inherit the main data configuration:
+Use the optional `configs/experiments.yaml` for named changes. For example, `lstm_hidden_64` changes hidden size and `lstm_lr_0001` changes learning rate. These inherit the main data configuration:
 
 ```powershell
-python src/train.py --config configs/experiments.yaml --experiment lstm_hidden_128
-python src/evaluate.py --config configs/experiments.yaml --experiment lstm_hidden_128 --split val
+python src/train.py --config configs/experiments.yaml --experiment lstm_hidden_64
+python src/evaluate.py --config configs/experiments.yaml --experiment lstm_hidden_64 --split val
 python src/report.py
 ```
 
@@ -126,6 +128,8 @@ To add another experiment, give it a unique name:
 ```
 
 Put it under `experiments:`. Changing multiple factors is allowed, but it no longer isolates one factor's effect. Do not edit a completed run's saved configuration. For full 60/100-epoch comparisons use distinct names and `early_stopping: false`.
+
+The expanded recipe changes multiple model/training factors together. `cnn_lstm_previous_settings` supplies the previous complete recipe on the same expanded cohort. `cnn_lstm_1500_patients` tests the updated recipe with fewer training patients while retaining the same 600 validation patients; prepare that recipe's separate cache first. For a morphology experiment, `cnn_lstm_morphology` adds derivative loss weight 0.1. Compare it to the updated CNN-LSTM using waveform MAE/RMSE, QRS scores and overlays. Do not assume a derivative penalty solves the flat-forecast failure. Old 300-patient and new 600-patient validation means describe different populations.
 
 For a different filter/scaler, prepare that recipe's cache before training:
 
@@ -158,6 +162,12 @@ Resume the exact recorded settings:
 
 ```powershell
 python src/train.py --config experiments/COHORT/RUN/config.json --resume
+```
+
+If the saved run already reached early-stopping patience but you intentionally want every configured epoch, add `--finish-budget`. This retains the checkpoint's model, optimizer, scheduler, data and scientific configuration while bypassing only the stop condition:
+
+```powershell
+python src/train.py --config experiments/COHORT/RUN/config.json --resume --finish-budget
 ```
 
 Replace `COHORT/RUN` with the actual folder shown by your configuration/output paths. Without `--resume`, existing checkpoints cause an explicit error. Resume restores optimizer, scheduler and random-generator state. A partial interrupted epoch is repeated.

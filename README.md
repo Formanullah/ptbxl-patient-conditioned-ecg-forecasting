@@ -2,11 +2,13 @@
 
 Predict the next **3 seconds** of a twelve-lead ECG from **5 observed seconds**, using PTB-XL at **100 Hz**. Compare LSTM and CNN-LSTM, with optional age, sex, prior diagnoses and contrastive learning.
 
-The main configuration is **1,500 training / 300 validation / 100 reserved test patients**. Use official folds 1–8 / 9 / 10. The test subset stays blocked during development.
+The main configuration is **4,500 training / 600 validation / 100 reserved test patients**. Use official folds 1–8 / 9 / 10. The test subset stays blocked during development.
+
+The updated candidate uses hidden size 128, two LSTM layers, a 128-unit forecast head, learning rate 0.0005 and weight decay 0.0005. Training has a maximum of 60 epochs, validation-based learning-rate reduction, and early stopping after 10 non-improving epochs. The smaller output head reduces total parameters despite the larger recurrent encoder. These settings are candidates for validation, not measured performance improvements. The earlier run selected epochs 12/25 and produced weak heartbeat peaks; more epochs alone did not solve this.
 
 ## Run manually, one step at a time
 
-These are instructions for you to run. The cleanup changes have **not been executed or tested**, as requested.
+The previous 1,500/300/100 configuration and measured results remain available through [configs/reference_1500.yaml](configs/reference_1500.yaml). Retrain for the expanded cohort before making accuracy claims.
 
 From the project folder, create an environment if needed, then activate it once:
 
@@ -47,7 +49,7 @@ Edit [configs/training.yaml](configs/training.yaml). This is the one main config
 subset:
   mode: custom
   seed: 42
-  patients: {train: 1500, val: 300, test: 100}
+  patients: {train: 4500, val: 600, test: 100}
 ```
 
 Increase these counts, or change `mode` to `full` for all official patients. Cohort/window settings determine separate cache and result paths. Changing a filter/scaler gives a separate preprocessing cache. After changing the dataset, repeat preparation, audit, training, evaluation and report generation. Old scores do not become scores for the larger dataset.
@@ -62,6 +64,8 @@ python src/evaluate.py --config configs/experiments.yaml --experiment lstm_early
 ```
 
 Earlier presets and retired entry points still exist pending explicit cleanup approval; the active instructions use only the two configs above. See the cleanup section at the end of the run guide.
+
+For controlled validation, `cnn_lstm_previous_settings` applies the previous model/training recipe to the expanded cohort. `cnn_lstm_1500_patients` applies the updated recipe to 1,500 training patients with the same 600 validation patients. `cnn_lstm_morphology` optionally adds derivative loss; it must be evaluated for both voltage error and peak preservation. These recipes are in `configs/experiments.yaml`. The previous 300-patient validation scores cannot be directly ranked against scores from 600 validation patients.
 
 ## Project layout
 
@@ -84,6 +88,6 @@ outputs/             Tables and figures, separated by cohort
 - [Leakage audit](Project_Documents/DATA_LEAKAGE_AUDIT.md): controls, historical evidence and checks still to run after cleanup.
 - [Presentation notes](Project_Documents/PRESENTATION_NOTES.md): explain the current methods and report results.
 
-The earlier 500 Hz assignment and small 100 Hz study remain with their results in `outputs/pilot/` and `outputs/research_100hz_dev/`. Their scores are historical, not results for the 1,500-patient training configuration. The earlier neural forecasts had poor R-peak preservation; larger training is an experiment, not a promised solution.
+The earlier 500 Hz assignment and small 100 Hz study remain with their results in `outputs/pilot/` and `outputs/research_100hz_dev/`. The measured 1,500-patient report is preserved in `outputs/custom_100hz_5s_3s_ee477b14/ASSIGNMENT_REPORT.md`. Their scores are historical, not results for the expanded configuration. The earlier neural forecasts had poor R-peak preservation; larger training is an experiment, not a promised solution.
 
 The private paper, raw data, caches, checkpoints and predictions remain excluded from repository publication. A reversible pre-cleanup source/document backup is local at `.cache/before_cleanup.zip`.
