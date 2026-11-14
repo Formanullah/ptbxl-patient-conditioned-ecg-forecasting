@@ -35,7 +35,28 @@ experiments:
     preprocessing: {filter: highpass}
   lstm_bandpass:
     preprocessing: {filter: bandpass}
-  lstm_hidden_128:
-    model: {hidden: 128}
-  lstm_lr_0005:
-    training: {lr: 0.0005}
+  lstm_hidden_64:
+    model: {hidden: 64}
+  lstm_lr_0001:
+    training: {lr: 0.0001}
+  cnn_lstm_lr_0001:
+    experiment: {architecture: cnn_lstm}
+    training: {lr: 0.0001}
+  cnn_lstm_morphology:
+    experiment: {architecture: cnn_lstm}
+    training: {derivative_weight: 0.1}
+  # Data-size control: same 600 validation patients and candidate model/settings.
+  cnn_lstm_1500_patients:
+    experiment: {architecture: cnn_lstm}
+    subset:
+      patients: {train: 1500, val: 600, test: 100}
+  # Previous model/training recipe on the expanded cohort, to measure the effect
+  # of the combined parameter changes separately from increasing patient counts.
+  cnn_lstm_previous_settings:
+    experiment: {architecture: cnn_lstm}
+    model: {hidden: 64, depth: 1, head_width: 256}
+    training:
+      lr: 0.001
+      weight_decay: 0.0001
+      early_stopping: false
+      scheduler: none

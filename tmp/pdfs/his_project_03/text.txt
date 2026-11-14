@@ -1,0 +1,66 @@
+
+===== PAGE 1 =====
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                   High    Integrity    Systems      Project                      
+                                                                                  
+                               TSA     Tasks    03                                
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                              Winter Semester 2026/27                             
+                                                                                  
+                                                                                  
+                                                                                  
+          Course   Information                                                    
+                                                                                  
+          Instructor: Dr. Fatima Sajid Butt                                       
+                                                                                  
+                                                                                  
+          Assignment    Description                                               
+                                                                                  
+          Based on the meeting’s discussion, here are the tasks, which have to be completed and
+          presented in the next session:                                          
+                                                                                  
+            1. Complete the previous task sheet and update the state of the art.  
+                                                                                  
+            2. After completing necessary data preprocessing, create and divide dataloaders into
+              training, validation and testing.                                   
+                                                                                  
+            3. Implement and train a LSTM model. Justify the hyper parameters used and record
+              the performance metrics.                                            
+                                                                                  
+            4. Evaluate the performance of the model by documenting the metrics and visualize
+              the results.                                                        
+                                                                                  
+            5. Implement and train a CNN-LSTM and compare the model to the previous model.
+                                                                                  
+            6. Compare your results to that found in literature.                  
+                                                                                  
+            7. IntheclasspresentthearchitectureandworkingofCNNsandLSTMs(layers, gates
+              etc.) and training of the model in detail.                          
+                                                                                  
+            8. Explain the metrics mathematically.                                
+                                                                                  
+            9. Define agentic AI and list the key components required to build a simple AI agent.
+                                                                                  
+           10. Report and present your findings in a report next week. All documents (written
+              in LATEX!), models, code etc. must be accessible to me and of course the group
+              members!                                                            
+                                                                                  
+           11. As discussed each group will have 25 minutes MAXIMUM to present their work.
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                         1                                        
+                                                                                  
+                                                                                  

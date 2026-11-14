@@ -148,7 +148,9 @@ def forecast_loss(pred, target, cfg):
     return loss
 
 
-def train(cfg, architecture, variant, resume=False):
+def train(cfg, architecture, variant, resume=False, finish_budget=False):
+    if finish_budget and not resume:
+        raise ValueError("--finish-budget requires --resume")
     manifest = validate_cache(cfg)
     cfg = copy.deepcopy(cfg)
     if (
@@ -262,7 +264,8 @@ def train(cfg, architecture, variant, resume=False):
     max_epochs = cfg["training"]["epochs"]
     for number in range(len(history) + 1, max_epochs + 1):
         if (
-            cfg["training"].get("early_stopping", True)
+            not finish_budget
+            and cfg["training"].get("early_stopping", True)
             and bad_epochs >= cfg["training"]["patience"]
         ):
             break
@@ -376,6 +379,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--resume", action="store_true", help="Continue the chosen saved checkpoint"
     )
+    parser.add_argument(
+        "--finish-budget",
+        action="store_true",
+        help="With --resume, continue to the configured epoch budget despite early stopping",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config, args.experiment)
@@ -388,4 +396,5 @@ if __name__ == "__main__":
             args.model or config.get("experiment", {}).get("architecture", "lstm"),
             args.variant or config.get("experiment", {}).get("variant", "patient_history"),
             resume=args.resume,
+            finish_budget=args.finish_budget,
         )
