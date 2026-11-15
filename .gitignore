@@ -5,8 +5,8 @@
 /outputs/*
 !/outputs/pilot/
 !/outputs/research_100hz_dev/
-/outputs/pilot/*.zip
 /outputs/pilot/smoke/
+.DS_Store
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -20,6 +20,8 @@ __pycache__/
 *.pt
 *.npz
 *.npy
-*colab_bundle.zip
 # Reversible local cleanup archives and future transfer bundles.
 *.zip
+
+/results/
+/notebooks/*executed*.ipynb

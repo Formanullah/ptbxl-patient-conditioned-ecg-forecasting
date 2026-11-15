@@ -1,7 +1,8 @@
-"""Run software checks with: python src/run_tests.py -q."""
+"""Run the active scientific and software checks with pytest."""
 
 import sys
 
 import pytest
 
-raise SystemExit(pytest.main(sys.argv[1:]))
+if __name__ == "__main__":
+    raise SystemExit(pytest.main(sys.argv[1:]))
