@@ -1,4 +1,4 @@
-"""Shared configuration and portable protocol identifiers."""
+"""Configuration, atomic metadata writes, and scientific protocol identities."""
 
 import copy
 import hashlib
@@ -7,115 +7,14 @@ from pathlib import Path
 
 import yaml
 
+SCHEMA = 3
 LEADS = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 CLASSES = ["NORM", "MI", "STTC", "CD", "HYP"]
-FEATURES = (
-    ["age_scaled", "age_missing", "sex_encoded", "sex_missing"]
-    + ["prior_" + label for label in CLASSES]
-    + ["history_missing"]
-)
-VARIANTS = ["ecg_only", "demographics", "patient_history", "patient_history_contrastive"]
-VARIANTS += ["expanded", "mrmr", "permutation"]
-SCHEMA = 1
-
-
-def merge_config(base, update):
-    result = copy.deepcopy(base)
-    for key, value in update.items():
-        result[key] = (
-            merge_config(result.get(key, {}), value)
-            if isinstance(value, dict)
-            else copy.deepcopy(value)
-        )
-    return result
-
-
-def read_config_tree(path, seen=None):
-    path = Path(path).resolve()
-    seen = set() if seen is None else seen
-    if path in seen:
-        raise ValueError("Circular configuration inheritance")
-    seen.add(path)
-    with Path(path).open(encoding="utf-8") as handle:
-        cfg = yaml.safe_load(handle)
-    # Run snapshots are JSON (also valid YAML); resume their exact executed settings.
-    if "config" in cfg and "architecture" in cfg:
-        cfg = cfg["config"]
-    if "extends" in cfg:
-        base = read_config_tree(Path(path).parent / cfg.pop("extends"), seen)
-        cfg = merge_config(base, cfg)
-    return cfg
-
-
-def load_config(path, experiment=None):
-    cfg = read_config_tree(path)
-    matrix = cfg.pop("experiments", None)
-    if matrix is not None:
-        if experiment not in matrix:
-            raise ValueError(f"Choose --experiment from: {', '.join(matrix)}")
-        cfg = merge_config(cfg, matrix[experiment])
-        cfg.setdefault("experiment", {})["name"] = experiment
-    d, tr = cfg["data"], cfg["training"]
-    if "history_seconds" in d:
-        for seconds, samples in (
-            ("history_seconds", "history"),
-            ("horizon_seconds", "horizon"),
-            ("window_stride_seconds", "stride"),
-        ):
-            value = float(d[seconds]) * d["sampling_rate"]
-            if value <= 0 or abs(value - round(value)) > 1e-6:
-                raise ValueError(f"{seconds} must be positive and resolve to whole samples")
-            d[samples] = int(round(value))
-        d.setdefault("start", 0)
-        d.setdefault("layout", "time_first")
-        cfg.setdefault("preprocessing", {"filter": "none", "scaling": "zscore", "order": 4})
-        cfg.setdefault("features", {})
-    if d["sampling_rate"] not in (100, 500):
-        raise ValueError("sampling_rate must be 100 or 500")
-    if min(d["history"], d["horizon"]) <= 0 or d["start"] < 0:
-        raise ValueError("Invalid input/target geometry")
-    if d["start"] + d["history"] + d["horizon"] > 10 * d["sampling_rate"]:
-        raise ValueError("Window exceeds the ten-second record")
-    if min(tr["epochs"], tr["patience"], tr["batch_size"], tr["threads"]) < 1:
-        raise ValueError("Training counts must be positive")
-    if tr["lr"] <= 0 or cfg["contrastive"]["temperature"] <= 0:
-        raise ValueError("Learning rate and temperature must be positive")
-    if "storage" in cfg:
-        resolve_storage(cfg)
-    return cfg
-
-
-def resolve_storage(cfg):
-    """Give each cohort/window protocol its own outputs and each transform its own cache.
-
-    Existing explicit paths (including saved run snapshots) remain portable and exact.
-    Changing model settings requires a new experiment name, not a new data cache.
-    """
-    settings = protocol(cfg)
-    identity = {key: settings[key] for key in ("data", "subset")}
-    data = cfg["data"]
-    label = (
-        f"{cfg['subset']['mode']}_{data['sampling_rate']}hz_"
-        f"{data['history_seconds']:g}s_{data['horizon_seconds']:g}s_{digest(identity)[:8]}"
-    )
-    storage = cfg["storage"]
-    transform = digest(cfg["preprocessing"])[:8]
-    data.setdefault("cache", str(Path(storage["data"]) / label / transform))
-    paths = cfg.setdefault("paths", {})
-    for name in ("experiments", "outputs"):
-        paths.setdefault(name, str(Path(storage[name]) / label))
-    paths.setdefault("documents", storage["documents"])
-    cfg["evaluation"].setdefault(
-        "selection_path", str(Path(paths["experiments"]) / "selection.json")
-    )
-    for method in ("mrmr", "permutation"):
-        cfg["features"].setdefault(
-            method + "_path", str(Path(paths["outputs"]) / f"{method}.json")
-        )
+FEATURE_SETS = ("F0", "F1", "F2", "expanded", "mrmr", "permutation")
 
 
 def digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(value, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
 
 def file_hash(path):
@@ -126,63 +25,86 @@ def file_hash(path):
     return h.hexdigest()
 
 
-def protocol(cfg):
-    if "history_seconds" in cfg["data"]:
-        return {
-            "schema": 2,
-            "data": {k: v for k, v in cfg["data"].items() if k not in ("root", "cache")},
-            "subset": cfg.get("subset", {"mode": "full", "seed": 42}),
-            "preprocessing": cfg["preprocessing"],
-            "leads": LEADS,
-            "targets": "unfiltered original mV; train-input scaling",
-            "history_policy": "strictly earlier timestamps; equal/missing timestamps excluded",
-            "train_folds": list(range(1, 9)),
-            "val_fold": 9,
-            "test_fold": 10,
-            "heldout_windows": "one start-zero window per record",
-        }
-    result = {
-        "schema": SCHEMA,
-        **{k: cfg["data"][k] for k in ("sampling_rate", "history", "horizon", "start")},
-        "leads": LEADS,
-        "train_folds": list(range(1, 9)),
-        "val_fold": 9,
-        "test_fold": 10,
-        "normalization": "per_lead_training_inputs_only",
-        "history_policy": "strictly_earlier_timestamp_union_scp_diagnostic_keys",
-    }
-    if cfg.get("subset"):
-        result["subset"] = {
-            "seed": cfg["subset"]["seed"],
-            "patients": cfg["subset"]["patients"],
-            "selection": "uniform_random_patients_with_all_their_records_within_official_folds",
-        }
-    return result
-
-
 def write_json(path, value):
-    """Write standards-compliant JSON atomically; undefined metrics use null."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(value, indent=2, allow_nan=False), encoding="utf-8")
-    tmp.replace(path)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False), encoding="utf-8")
+    temporary.replace(path)
 
 
 def read_json(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
 
-def runtime(cfg):
+def load_config(path="configs/config.yaml", mode=None):
+    with Path(path).open(encoding="utf-8-sig") as handle:
+        cfg = yaml.safe_load(handle)
+    if cfg.get("schema") != SCHEMA:
+        raise ValueError("Legacy configuration: use archive/legacy_2ad3e68/src and its run guide")
+    cfg = copy.deepcopy(cfg)
+    if mode:
+        cfg["run_mode"] = mode
+    validate(cfg)
+    return cfg
+
+
+def validate(cfg):
+    d, tr = cfg["data"], cfg["training"]
+    if cfg["run_mode"] not in ("pilot", "medium", "full"):
+        raise ValueError("run_mode must be pilot, medium or full")
+    if d["sampling_rate"] != 100 or (d["history"], d["horizon"]) not in ((700, 300), (500, 500)):
+        raise ValueError("Use native 100 Hz and either 700/300 or the separate 500/500 ablation")
+    if tr["epochs"] < 1 or tr["batch_size"] < 1 or tr["lr"] <= 0:
+        raise ValueError("Invalid training budget, batch size or learning rate")
+    if cfg["model"]["depth"] not in (1, 2):
+        raise ValueError("Use one or two recurrent layers")
+    p = cfg["preprocessing"]
+    if not 0 < p["low_hz"] < p["high_hz"] < 50 or p["order"] < 1:
+        raise ValueError("Invalid bandpass settings")
+
+
+def protocol(cfg):
+    return {
+        "schema": SCHEMA,
+        "dataset": "PTB-XL",
+        "version": "1.0.3",
+        "fs": 100,
+        "history": cfg["data"]["history"],
+        "horizon": cfg["data"]["horizon"],
+        "start": 0,
+        "windows_per_record": 1,
+        "leads": LEADS,
+        "target": "original unfiltered mV",
+        "scaler": "raw training history per-lead zscore",
+        "folds": {"train": list(range(1, 9)), "val": [9], "test": [10]},
+    }
+
+
+def cohort_limits(cfg):
+    mode = cfg["run_mode"]
+    return cfg["cohorts"][mode] if mode != "full" else {"train": None, "val": None}
+
+
+def study_dir(cfg):
+    return Path(cfg["paths"]["results"]) / cfg["study_id"]
+
+
+def source_hashes():
+    root = Path(__file__).parent
+    return {p.relative_to(root).as_posix(): file_hash(p) for p in sorted(root.rglob("*.py"))}
+
+
+def device_for(cfg):
     import torch
 
-    torch.set_num_threads(cfg["training"]["threads"])
     requested = cfg["training"]["device"]
-    device = ("cuda" if torch.cuda.is_available() else "cpu") if requested == "auto" else requested
+    if requested == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA requested but unavailable; select a GPU runtime or device=cpu")
+    device = "cuda" if requested == "auto" and torch.cuda.is_available() else requested
+    device = "cpu" if device == "auto" else device
+    if cfg["run_mode"] == "full" and device != "cuda" and not cfg["training"]["allow_full_cpu"]:
+        raise RuntimeError(
+            "Full training requires CUDA; explicitly enable allow_full_cpu to override"
+        )
     return torch.device(device)
-
-
-def run_directory(cfg, architecture, variant):
-    return Path(cfg["paths"]["experiments"]) / cfg.get("experiment", {}).get(
-        "name", f"{architecture}_{variant}"
-    )
