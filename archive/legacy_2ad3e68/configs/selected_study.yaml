@@ -1,0 +1,8 @@
+# Use only for the stages after the P0-P3 preprocessing comparison.
+# Validation selected no filter + robust scaling; P4 is identical to measured P3.
+extends: study.yaml
+data:
+  cache: data/research_100hz_dev_p3
+preprocessing:
+  filter: none
+  scaling: robust
