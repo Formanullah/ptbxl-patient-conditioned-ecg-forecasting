@@ -64,13 +64,24 @@ scientific signature matches. Changed cohort/model/source/settings require a new
 study or experiment identity. Raw-source caches live under `data/study_v3`; new
 results, checkpoints, figures and manifests live under `results/<study_id>/`.
 
-## Colab
+## Notebook: local or Colab
 
-Open `notebooks/PTBXL_Full_Colab_GPU.ipynb`. Supply a Drive project folder or
-uploaded project ZIP, then choose a Drive dataset or official PhysioNet download
-of `records100` only. The notebook starts in pilot mode. Its FULL preset runs
-the staged study, saves checkpoints and logs to Drive, and exports
-`PTBXL_Research_Results.zip`.
+Open `notebooks/PTBXL_Full_Colab_GPU.ipynb` in Jupyter or VS Code and select
+the Python kernel with this project's dependencies. On Windows, use
+`.venv\Scripts\python.exe` if you already have the project environment. The
+notebook finds the project root automatically when you start it there or under
+`notebooks/`. Otherwise set `LOCAL_PROJECT_DIR` in the first cell. Set
+`LOCAL_DATA_ROOT` if the dataset is outside the project's `PTB-XL/` folder.
+Local runs do not mount Google Drive. By default they save caches in
+`data/study_v3/` and outputs in `results/<study_id>/`.
+
+In Colab, set `DRIVE_PROJECT` or upload the source ZIP and choose Drive data
+or the official PhysioNet download of `records100` only. Both environments
+start in pilot mode. The first cell controls patient counts for pilot and
+medium screening; use a new `STUDY_ID` when changing the cohort. Section 4
+shows the resulting ECG and patient counts, including reserved test metadata.
+Full mode uses the official full cohorts and requires CUDA unless explicitly
+enabled on CPU. Results are exported as `PTBXL_Research_Results.zip`.
 
 ## Results and verification
 
