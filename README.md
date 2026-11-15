@@ -68,28 +68,24 @@ results, checkpoints, figures and manifests live under `results/<study_id>/`.
 
 Open `notebooks/PTBXL_Full_Colab_GPU.ipynb`. Supply a Drive project folder or
 uploaded project ZIP, then choose a Drive dataset or official PhysioNet download
-of records100 only. No private GitHub access or Windows paths are required.
-The notebook starts in pilot mode. Its FULL preset runs the staged study,
-persists checkpoints/logs to Drive and exports `PTBXL_Research_Results.zip`.
-GPU availability and completion are not guaranteed; pending runs stay pending.
+of `records100` only. The notebook starts in pilot mode. Its FULL preset runs
+the staged study, saves checkpoints and logs to Drive, and exports
+`PTBXL_Research_Results.zip`.
 
-## Code and explanations
+## Results and verification
 
-- `src/data.py`: checksum/quality checks, patient selection, caches and DataLoaders.
-- `src/preprocessing.py`: causal history filtering and training-fitted transforms.
-- `src/models/`: independent LSTM and CNN-LSTM classes with early conditioning.
-- `src/train.py`: the shared training/validation loop and resumable checkpoints.
-- `src/evaluate.py`: explicit inference, baselines and locked final testing.
-- `src/feature_selection.py`: the separate expanded-feature extension.
-- `src/visualize.py`, `src/compare.py`, `src/report.py`: figures and saved-evidence reporting.
-- `src/pipeline.py`: the small shared CLI; the notebook calls the same functions.
+The [CPU pilot report](docs/RESULTS.md) covers six two-epoch runs on 339 training
+and 81 validation ECGs. Fold 10 remained unopened. All 26 acceptance tests
+passed, and an isolated kernel executed all 11 notebook code cells on synthetic
+data. Synthetic checks also exercised screening, tuning, both feature-selection
+methods, and final-test locking. A checksum-verified official download and WFDB
+decode were tested for one 100-Hz record.
 
-Read `docs/METHODOLOGY.md`, `docs/EQUATIONS.md`, `docs/DATA_DICTIONARY.md`, and
-`docs/DATA_LEAKAGE_AUDIT.md`. Generated `docs/RESULTS.md` reflects actual artifacts.
-See `docs/EXECUTION_STATUS.md` for what ran locally and what remains pending.
-Equations, units, patient weighting, filter limitations and null correlations are
-explained explicitly. The final summary follows the required nine-section order.
+Real-data screening, tuning, feature selection, the four 120-epoch GPU runs, and
+locked final scoring are pending. Pilot and synthetic scores do not rank the
+research conditions.
 
-The previous implementation is preserved in `archive/legacy_2ad3e68`. Existing
-weights and measured outputs remain untouched; old horizons are not new results.
-See `docs/CHANGE_MAP.md` for what was kept, fixed, simplified and archived.
+The shared CLI is `src/pipeline.py`; the notebook calls the same experiment code.
+See [methodology](docs/METHODOLOGY.md), [equations](docs/EQUATIONS.md), and the
+[data dictionary](docs/DATA_DICTIONARY.md). The [historical archive](archive/legacy_2ad3e68/README_ARCHIVE.md)
+explains earlier protocols and which old reports lack supporting artifacts.

@@ -121,3 +121,14 @@ and a labelled median-error example show history, future truth and forecast for
 all twelve leads. Good scalar voltage error does not establish heartbeat fidelity
 or clinical usefulness. No full-data GPU performance is claimed until run artifacts
 prove completion.
+
+## Verifying leakage controls
+
+Run `python src/pipeline.py audit` and read `leakage_audit.json` under the study's
+results. The audit checks patient separation, one window per recording, an exact
+re-fit of the raw training scaler, and invariance to future-target mutations and
+changes beyond the causal filter prefix. Preparation also rejects invalid or
+duplicate record IDs and changed cache or source files. Tests in `tests/` cover
+training-only static transforms, checkpoint and RNG restoration, physical-unit
+metrics and patient weighting, and the fold-10 gate and ledger. A failed check
+stops the applicable stage.
