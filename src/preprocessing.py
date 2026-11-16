@@ -1,409 +1,260 @@
-"""Audited physical-unit WFDB loading and leakage-aware input construction."""
+"""Causal history transforms and training-fitted waveform/static scaling."""
 
-import argparse
 import ast
-import copy
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
-import wfdb
-from filelock import FileLock
-from torch.utils.data import DataLoader, Dataset
+from scipy import signal
 
-from config import (
-    CLASSES,
-    FEATURES,
-    LEADS,
-    digest,
-    file_hash,
-    load_config,
-    protocol,
-    read_json,
-    write_json,
-)
+from config import CLASSES, digest, file_hash, read_json, write_json
 
 
-def metadata(root):
-    root = Path(root)
-    df = pd.read_csv(root / "ptbxl_database.csv").sort_values("ecg_id").reset_index(drop=True)
-    needed = {"ecg_id", "patient_id", "strat_fold", "age", "sex", "recording_date", "scp_codes"}
-    if needed - set(df):
-        raise ValueError(f"Missing metadata: {sorted(needed - set(df))}")
-    if df.ecg_id.duplicated().any() or df[["patient_id", "strat_fold"]].isna().any().any():
-        raise ValueError("Duplicate ECG IDs or missing patient/fold identifiers")
-    if not df.strat_fold.isin(range(1, 11)).all():
-        raise ValueError("Invalid stratified fold")
-    if df.groupby("patient_id").strat_fold.nunique().max() > 1:
-        raise ValueError("Patient leakage across folds")
-    df["split"] = np.where(df.strat_fold <= 8, "train", np.where(df.strat_fold == 9, "val", "test"))
-    if set(df.split) != {"train", "val", "test"}:
-        raise ValueError("Every split must be nonempty")
-    return df
+def filter_history(history, cfg):
+    """Accept [time, lead]; no future samples enter this function."""
+    p = cfg["preprocessing"]
+    sos = signal.butter(
+        p["order"], [p["low_hz"], p["high_hz"]], fs=100, btype="bandpass", output="sos"
+    )
+    zi = signal.sosfilt_zi(sos)[:, :, None] * history[0][None, None, :]
+    result, _ = signal.sosfilt(sos, history, axis=0, zi=zi)
+    return result.astype(np.float32)
 
 
-def static_features(df, root):
-    """Current labels returned separately; never present in the static matrix."""
-    df = df.copy()
-    train = df.split.eq("train")
-    age = pd.to_numeric(df.age, errors="coerce").where(lambda a: a.between(0, 120))
-    observed = age[train].dropna()
-    median = float(observed.median()) if len(observed) else 0.0
-    std = float(observed.std(ddof=0)) if len(observed) else 1.0
-    std = std if np.isfinite(std) and std > 1e-8 else 1.0
-    sex = pd.to_numeric(df.sex, errors="coerce")
-    valid_sex = sex.isin([0, 1])
+def waveform_scaler(waves, history, batch_size=128):
+    total = np.zeros(12, dtype=np.float64)
+    squares = total.copy()
+    count = 0
+    for start in range(0, len(waves), batch_size):
+        x = np.asarray(waves[start : start + batch_size, :history], dtype=np.float64)
+        total += x.sum(axis=(0, 1))
+        squares += np.square(x).sum(axis=(0, 1))
+        count += x.shape[0] * x.shape[1]
+    mean = total / count
+    std = np.sqrt(np.maximum(squares / count - mean**2, 0))
+    return {
+        "mean": mean.tolist(),
+        "std": np.where(std > 1e-8, std, 1).tolist(),
+        "fitted_split": "train",
+        "fitted_samples_per_lead": count,
+        "definition": "raw historical inputs only; population standard deviation",
+    }
+
+
+def inverse_scale(x, scaler):
+    return np.asarray(x) * np.asarray(scaler["std"]) + np.asarray(scaler["mean"])
+
+
+def prepare_transforms(cache, cfg, preprocessing, *, include_test=False):
+    cache = Path(cache)
+    base = read_json(cache / "manifest.json")
+    history = cfg["data"]["history"]
+    scaler_path = cache / "scaler.json"
+    if not scaler_path.exists():
+        waves = np.load(cache / "waves_train.npy", mmap_mode="r")
+        write_json(scaler_path, {**waveform_scaler(waves, history), "cohort": base["cohort"]})
+        write_json(cache / "scaler_receipt.json", {"sha256": file_hash(scaler_path)})
+    if read_json(cache / "scaler_receipt.json")["sha256"] != file_hash(scaler_path):
+        raise ValueError("Saved training scaler changed")
+    scaler = read_json(scaler_path)
+    if scaler.get("cohort") != base["cohort"]:
+        raise ValueError("Scaler belongs to a different cohort")
+    if preprocessing not in ("P0", "P1"):
+        raise ValueError("preprocessing must be P0 or P1")
+    if preprocessing == "P0":
+        return scaler
+    if include_test:
+        from evaluate import verify_lock
+
+        verify_lock(cfg, cache)
+    identity = digest({"cohort": base["cohort"], "settings": cfg["preprocessing"]})
+    splits = ("train", "val", "test") if include_test else ("train", "val")
+    for split in splits:
+        raw_path = cache / f"waves_{split}.npy"
+        if not raw_path.exists():
+            continue
+        path = cache / f"P1_{identity[:12]}_{split}.npy"
+        receipt = path.with_suffix(".json")
+        if path.exists() and receipt.exists():
+            info = read_json(receipt)
+            if info["identity"] != identity or info["sha256"] != file_hash(path):
+                raise ValueError("Filtered cache changed; use a fresh cache directory")
+            continue
+        waves = np.load(raw_path, mmap_mode="r")
+        output = np.lib.format.open_memmap(
+            path, mode="w+", dtype="float32", shape=(len(waves), history, 12)
+        )
+        for i in range(len(waves)):
+            output[i] = filter_history(waves[i, :history], cfg)
+        output.flush()
+        del output
+        write_json(
+            receipt,
+            {
+                "identity": identity,
+                "sha256": file_hash(path),
+                "target": "unchanged raw future",
+                "scaler_sha256": file_hash(scaler_path),
+            },
+        )
+    return scaler
+
+
+def filtered_path(cache, cfg, split):
+    base = read_json(Path(cache) / "manifest.json")
+    key = digest({"cohort": base["cohort"], "settings": cfg["preprocessing"]})[:12]
+    return Path(cache) / f"P1_{key}_{split}.npy"
+
+
+def prior_diagnoses(frame, root):
+    """Group equal timestamps before updating history, excluding self and same-time labels."""
     mapping = pd.read_csv(Path(root) / "scp_statements.csv", index_col=0)
     mapping = mapping.loc[mapping.diagnostic.eq(1), "diagnostic_class"].dropna().to_dict()
-    labels = np.zeros((len(df), 5), dtype=np.float32)
-    for i, codes in enumerate(df.scp_codes):
+    labels = np.zeros((len(frame), 5), dtype=np.float32)
+    for i, codes in enumerate(frame.scp_codes):
         parsed = ast.literal_eval(codes)
         if not isinstance(parsed, dict):
-            raise ValueError(f"Invalid SCP dictionary for ECG {df.iloc[i].ecg_id}")
-        # Likelihood 0 means unknown, not an absent statement (PhysioNet metadata).
-        known = {mapping.get(code) for code in parsed}
-        labels[i] = [label in known for label in CLASSES]
-    prior = np.zeros_like(labels)
-    missing = np.ones(len(df), dtype=np.float32)
-    work = pd.DataFrame(
-        {
-            "position": np.arange(len(df)),
-            "patient": df.patient_id,
-            "date": pd.to_datetime(df.recording_date, errors="coerce"),
-        }
-    )
-    for _, group in work.groupby("patient", sort=False):
-        known = np.zeros(5, dtype=np.float32)
-        seen = False
-        for _, same_time in group.dropna(subset=["date"]).groupby("date", sort=True):
-            positions = same_time.position.to_numpy(dtype=int)
-            prior[positions] = known
-            missing[positions] = float(not seen)
-            known = np.maximum(known, labels[positions].max(axis=0))
-            seen = True
-    static = np.column_stack(
-        [
-            (age.fillna(median) - median) / std,
-            age.isna(),
-            sex.where(valid_sex, 0.5),
-            ~valid_sex,
-            prior,
-            missing,
-        ]
-    ).astype(np.float32)
-    groups = pd.DataFrame(
-        {
-            "ecg_id": df.ecg_id.astype(int),
-            "patient_id": df.patient_id.astype(int),
-            "split": df.split,
-            "age": age,
-            "sex": sex.where(valid_sex),
-            "history_available": 1 - missing.astype(int),
-        }
-    )
-    for j, label in enumerate(CLASSES):
-        groups[label] = labels[:, j].astype(int)
-    return (
-        static,
-        groups,
-        {
-            "age_median": median,
-            "age_std": std,
-            "training_observed_age": len(observed),
-            "features": FEATURES,
-        },
-    )
-
-
-def read_wave(row, cfg):
-    fs = cfg["data"]["sampling_rate"]
-    field = "filename_hr" if fs == 500 else "filename_lr"
-    path = Path(cfg["data"]["root"]) / row[field]
-    a, info = wfdb.rdsamp(str(path))
-    names = [str(name).upper() for name in info["sig_name"]]
-    if info["fs"] != fs or a.shape != (10 * fs, 12):
-        raise ValueError(f"Unexpected rate/dimensions: {info['fs']}, {a.shape}")
-    if names != [name.upper() for name in LEADS] or any(unit != "mV" for unit in info["units"]):
-        raise ValueError("Unexpected lead order or units; expected twelve standard leads in mV")
-    if not np.isfinite(a).all():
-        raise ValueError("Nonfinite waveform values")
-    return np.asarray(a, dtype=np.float32)
-
-
-def audit(cfg):
-    df = metadata(cfg["data"]["root"])
-    cache = Path(cfg["data"]["cache"])
-    cache.mkdir(parents=True, exist_ok=True)
-    failures = []
-    for i, row in df.iterrows():
-        try:
-            read_wave(row, cfg)
-        except Exception as exc:
-            failures.append({"ecg_id": int(row.ecg_id), "error": str(exc)})
-        if (i + 1) % 2000 == 0:
-            print(f"AUDIT {i + 1}/{len(df)}; failures={len(failures)}", flush=True)
-    static, groups, stats = static_features(df, cfg["data"]["root"])
-    summary = {
-        "protocol": protocol(cfg),
-        "records": len(df),
-        "patients": int(df.patient_id.nunique()),
-        "history_records": int((static[:, -1] == 0).sum()),
-        "failures": failures,
-        "splits": {
-            s: {
-                "records": int((df.split == s).sum()),
-                "patients": int(df.loc[df.split == s, "patient_id"].nunique()),
-            }
-            for s in ("train", "val", "test")
-        },
-        "static_statistics": stats,
+            raise ValueError("SCP annotations must be dictionaries")
+        classes = {mapping.get(k) for k in parsed}
+        labels[i] = [name in classes for name in CLASSES]
+    prior = np.zeros((len(frame), 6), dtype=np.float32)
+    prior[:, -1] = 1
+    work = frame[["patient_id", "recording_date"]].copy()
+    work["position"] = np.arange(len(frame))
+    work["date"] = pd.to_datetime(work.recording_date, errors="coerce")
+    edges = []
+    for _, patient in work.groupby("patient_id", sort=False):
+        known, previous = np.zeros(5, dtype=np.float32), []
+        for date, same_time in patient.dropna(subset=["date"]).groupby("date", sort=True):
+            indices = same_time.position.to_numpy(dtype=int)
+            prior[indices, :5] = known
+            prior[indices, -1] = float(not previous)
+            for i in indices:
+                for j, previous_date in previous:
+                    if not previous_date < date:
+                        raise ValueError("Non-past diagnosis entered historical features")
+                    edges.append((int(frame.iloc[j].ecg_id), int(frame.iloc[i].ecg_id)))
+            known = np.maximum(known, labels[indices].max(axis=0))
+            previous.extend((i, date) for i in indices)
+    return prior, {
+        "passed": True,
+        "strict_prior_edges": len(edges),
+        "edge_hash": digest(edges),
+        "available_records": int((prior[:, -1] == 0).sum()),
+        "missing_dates": int(work.date.isna().sum()),
+        "interpretation": "prior ECG annotation proxies, not a clinical problem list",
     }
-    write_json(cache / "audit.json", summary)
-    groups.to_csv(cache / "metadata_audit.csv", index=False)
-    if failures:
-        raise ValueError(f"{len(failures)} invalid records; see {cache / 'audit.json'}")
-    print(summary, flush=True)
-    return summary
 
 
-def preprocess(cfg):
-    """Read raw data, save only the requested window, and fit training inputs."""
-    if cfg.get("subset"):
-        return prepare_subset(cfg)
-    d = cfg["data"]
-    root, cache = Path(d["root"]), Path(d["cache"])
-    cache.mkdir(parents=True, exist_ok=True)
-    # Invalidate the completion marker before replacing any cache files.
-    (cache / "manifest.json").unlink(missing_ok=True)
-    df = metadata(root)
-    static, groups, age_stats = static_features(df, root)
-    # Keep bounded RAM: ~471 MB at the default geometry, rather than full 10 s records.
-    x = np.empty((len(df), 12, d["history"]), dtype=np.float32)
-    y = np.empty((len(df), 12, d["horizon"]), dtype=np.float32)
-    failures = []
-    st, cut = d["start"], d["start"] + d["history"]
-    for i, row in df.iterrows():
-        try:
-            wave = read_wave(row, cfg)
-            x[i], y[i] = wave[st:cut].T, wave[cut : cut + d["horizon"]].T
-        except Exception as exc:
-            failures.append({"ecg_id": int(row.ecg_id), "error": str(exc)})
-        if (i + 1) % 2000 == 0:
-            print(f"PREPROCESS {i + 1}/{len(df)}", flush=True)
-    if failures:
-        write_json(cache / "invalid_records.json", failures)
-        raise ValueError("Invalid waveforms; see invalid_records.json. No cache was committed.")
-    observed = x[df.split.eq("train").to_numpy()]
-    mean = observed.mean(axis=(0, 2), dtype=np.float64).astype(np.float32)
-    std = observed.std(axis=(0, 2), dtype=np.float64).astype(np.float32)
-    std[std < 1e-8] = 1.0
-    del observed
-    x -= mean[None, :, None]
-    x /= std[None, :, None]
-    y -= mean[None, :, None]
-    y /= std[None, :, None]
-    manifest = {
-        "protocol": protocol(cfg),
-        "metadata_sha256": file_hash(root / "ptbxl_database.csv"),
-        "scp_sha256": file_hash(root / "scp_statements.csv"),
-        "static_statistics": age_stats,
-        "mean_mV": mean.tolist(),
-        "std_mV": std.tolist(),
-        "splits": {},
-    }
-    for split in ("train", "val", "test"):
-        mask = df.split.eq(split).to_numpy()
-        for name, array in (("X", x), ("y", y), ("static", static)):
-            np.save(cache / f"{name}_{split}.npy", array[mask])
-        groups.loc[mask].to_csv(cache / f"metadata_{split}.csv", index=False)
-        manifest["splits"][split] = {
-            "records": int(mask.sum()),
-            "ids_sha256": digest(df.loc[mask, "ecg_id"].tolist()),
-        }
-    manifest["files"] = {
-        path.name: file_hash(path)
-        for pattern in (
-            "X_*.npy",
-            "y_*.npy",
-            "static_*.npy",
-            "metadata_train.csv",
-            "metadata_val.csv",
-            "metadata_test.csv",
+def observed_rr(history):
+    from wfdb import processing
+
+    if np.ptp(history[:, 1]) < 1e-8:
+        return [np.nan] * 3
+    try:
+        peaks = processing.xqrs_detect(history[:, 1], fs=100, verbose=False)
+        rr = np.diff(peaks) / 100
+        return [60 / rr.mean(), rr.mean(), rr.std()] if len(rr) >= 2 else [np.nan] * 3
+    except (ValueError, IndexError, FloatingPointError):
+        return [np.nan] * 3
+
+
+def feature_arrays(cfg, cache, feature_set, splits=None):
+    """Return train-fitted static arrays; expensive observed features are extension-only."""
+    cache = Path(cache)
+    splits = list(splits) if splits is not None else ["train", "val"]
+    if "test" in splits:
+        from evaluate import verify_lock
+
+        verify_lock(cfg, cache)
+    frames = {s: pd.read_csv(cache / f"metadata_{s}.csv") for s in splits}
+    full = pd.concat([frames[s].assign(split=s) for s in splits], ignore_index=True)
+    train = full.split.eq("train").to_numpy()
+    base = read_json(cache / "manifest.json")
+    if feature_set == "F0":
+        return (
+            {s: np.zeros((len(frames[s]), 0), dtype=np.float32) for s in splits},
+            [],
+            {"groups": {}, "statistics": {}},
         )
-        for path in cache.glob(pattern)
-    }
-    manifest["fingerprint"] = digest(manifest)
-    # Written last: partially completed caches cannot masquerade as complete ones.
-    write_json(cache / "manifest.json", manifest)
-    print(f"Prepared cache {cache}; fingerprint={manifest['fingerprint']}", flush=True)
-    return manifest
+    raw, names, groups, stats = [], [], {}, {}
 
+    def continuous(name, values):
+        values = np.asarray(values, dtype=float)
+        observed = values[train & np.isfinite(values)]
+        center = float(np.median(observed)) if len(observed) else 0.0
+        std = float(observed.std()) if len(observed) and observed.std() > 1e-8 else 1.0
+        missing = ~np.isfinite(values)
+        raw.extend([(np.where(missing, center, values) - center) / std, missing])
+        names.extend([name, name + "_missing"])
+        groups[name] = [name, name + "_missing"]
+        stats[name] = {"median": center, "std": std, "training_observations": len(observed)}
 
-def prepare_subset(cfg):
-    """Select whole patients, recover cached mV, and refit scalers on pilot inputs only."""
-    source_cfg = copy.deepcopy(cfg)
-    source_cfg.pop("subset")
-    source_cfg["data"]["cache"] = cfg["subset"]["source_cache"]
-    source = validate_cache(source_cfg)
-    cache = Path(cfg["data"]["cache"])
-    source_path = Path(source_cfg["data"]["cache"])
-    if cache.resolve() == source_path.resolve():
-        raise ValueError("Subset cache must differ from the full source cache")
-    cache.mkdir(parents=True, exist_ok=True)
-    (cache / "manifest.json").unlink(missing_ok=True)
-    full_df = metadata(cfg["data"]["root"])
-    rng = np.random.default_rng(cfg["subset"]["seed"])
-    frames, xs, ys, selected_patients = [], [], [], {}
-    source_mean = np.asarray(source["mean_mV"], dtype=np.float32)[None, :, None]
-    source_std = np.asarray(source["std_mV"], dtype=np.float32)[None, :, None]
-    for split in ("train", "val", "test"):
-        meta = pd.read_csv(source_path / f"metadata_{split}.csv")
-        patients = np.sort(meta.patient_id.unique())
-        count = cfg["subset"]["patients"][split]
-        if not isinstance(count, int) or count < 1 or count > len(patients):
-            raise ValueError(f"Invalid subset patient count for {split}: {count}")
-        selected = np.sort(rng.permutation(patients)[:count])
-        selected_patients[split] = selected.astype(int).tolist()
-        mask = meta.patient_id.isin(selected).to_numpy()
-        ids = meta.loc[mask, "ecg_id"].tolist()
-        frame = full_df.set_index("ecg_id").loc[ids].reset_index()
-        frames.append(frame)
-        for name, destination in (("X", xs), ("y", ys)):
-            array = np.load(source_path / f"{name}_{split}.npy", mmap_mode="r")
-            destination.append(np.asarray(array[mask]) * source_std + source_mean)
-    df = pd.concat(frames, ignore_index=True)
-    x, y = np.concatenate(xs), np.concatenate(ys)
-    static, groups, stats = static_features(df, cfg["data"]["root"])
-    train = df.split.eq("train").to_numpy()
-    mean = x[train].mean(axis=(0, 2), dtype=np.float64).astype(np.float32)
-    std = x[train].std(axis=(0, 2), dtype=np.float64).astype(np.float32)
-    std[std < 1e-8] = 1.0
-    x = (x - mean[None, :, None]) / std[None, :, None]
-    y = (y - mean[None, :, None]) / std[None, :, None]
-    manifest = {
-        "protocol": protocol(cfg),
-        "metadata_sha256": source["metadata_sha256"],
-        "scp_sha256": source["scp_sha256"],
-        "static_statistics": stats,
-        "mean_mV": mean.tolist(),
-        "std_mV": std.tolist(),
-        "splits": {},
-        "selection": {
-            "patients": selected_patients,
-            "source_fingerprint": source["fingerprint"],
-            "voltage_source": "inverse-transformed source cache; float32 roundoff possible",
-        },
-    }
-    for split in ("train", "val", "test"):
-        mask = df.split.eq(split).to_numpy()
-        for name, array in (("X", x), ("y", y), ("static", static)):
-            np.save(cache / f"{name}_{split}.npy", array[mask])
-        groups.loc[mask].to_csv(cache / f"metadata_{split}.csv", index=False)
-        manifest["splits"][split] = {
-            "records": int(mask.sum()),
-            "ids_sha256": digest(df.loc[mask, "ecg_id"].tolist()),
-        }
-    manifest["files"] = {
-        path.name: file_hash(path)
-        for pattern in ("*.npy", "metadata_*.csv")
-        for path in cache.glob(pattern)
-    }
-    manifest["fingerprint"] = digest(manifest)
-    write_json(cache / "manifest.json", manifest)
-    print(f"Patient subset prepared: {manifest['splits']}", flush=True)
-    return manifest
-
-
-def validate_cache(cfg):
-    cache = Path(cfg["data"]["cache"])
-    manifest = read_json(cache / "manifest.json")
-    if manifest["protocol"] != protocol(cfg):
-        raise ValueError("Cache protocol mismatch; run preprocess for the requested geometry")
-    unsigned = {k: v for k, v in manifest.items() if k != "fingerprint"}
-    if digest(unsigned) != manifest["fingerprint"]:
-        raise ValueError("Cache manifest fingerprint is invalid")
-    for filename, expected_hash in manifest["files"].items():
-        if file_hash(cache / filename) != expected_hash:
-            raise ValueError(f"Cached file changed: {filename}; rerun preprocess")
-    root = Path(cfg["data"]["root"])
-    for filename, key in (
-        ("ptbxl_database.csv", "metadata_sha256"),
-        ("scp_statements.csv", "scp_sha256"),
-    ):
-        if (root / filename).exists() and file_hash(root / filename) != manifest[key]:
-            raise ValueError(f"Source metadata changed: {filename}; rerun preprocess")
-    patients = []
-    for split in ("train", "val", "test"):
-        frame = pd.read_csv(cache / f"metadata_{split}.csv")
-        if digest(frame.ecg_id.tolist()) != manifest["splits"][split]["ids_sha256"]:
-            raise ValueError(f"Cached record identifiers changed: {split}")
-        patients.append(set(frame.patient_id))
-    if any(patients[i] & patients[j] for i in range(3) for j in range(i + 1, 3)):
-        raise ValueError("Cached patient leakage")
-    return manifest
-
-
-class ECGDataset(Dataset):
-    def __init__(self, cfg, split, variant="patient_history", limit=None):
-        cache = Path(cfg["data"]["cache"])
-        self.x = np.load(cache / f"X_{split}.npy", mmap_mode="r")
-        self.y = np.load(cache / f"y_{split}.npy", mmap_mode="r")
-        self.static = np.load(cache / f"static_{split}.npy", mmap_mode="r")
-        self.metadata = pd.read_csv(cache / f"metadata_{split}.csv")
-        self.patients = self.metadata.patient_id.to_numpy(dtype=np.int64)
-        self.static_dim = 0 if variant == "ecg_only" else (4 if variant == "demographics" else 10)
-        if len(self.x) != len(self.metadata) or self.static.shape != (len(self.x), 10):
-            raise ValueError("Invalid cached array shapes")
-        if self.x.shape[1:] != (12, cfg["data"]["history"]):
-            raise ValueError("Cached input geometry mismatch")
-        if self.y.shape != (len(self.x), 12, cfg["data"]["horizon"]):
-            raise ValueError("Cached target geometry mismatch")
-        self.n = min(len(self.x), limit) if limit is not None else len(self.x)
-
-    def __len__(self):
-        return self.n
-
-    def __getitem__(self, i):
-        return {
-            "x": torch.from_numpy(self.x[i].copy()),
-            "y": torch.from_numpy(self.y[i].copy()),
-            "static": torch.from_numpy(self.static[i, : self.static_dim].copy()),
-            "patient_id": int(self.patients[i]),
-            "index": i,
-        }
-
-
-def make_loaders(cfg, variant, generator=None, limit=None, splits=("train", "val", "test")):
-    datasets = {s: ECGDataset(cfg, s, variant, limit) for s in splits}
-    tr = cfg["training"]
-    return {
-        s: DataLoader(
-            ds,
-            batch_size=tr["batch_size"],
-            shuffle=(s == "train"),
-            generator=generator if s == "train" else None,
-            num_workers=tr["num_workers"],
+    age = pd.to_numeric(full.age, errors="coerce").where(lambda a: a.between(0, 120))
+    continuous("age", age)
+    sex = pd.to_numeric(full.sex, errors="coerce")
+    valid = sex.isin([0, 1])
+    observed_sex = sex[train & valid]
+    fill = float(observed_sex.mode().iloc[0]) if len(observed_sex) else 0.0
+    raw.extend([sex.where(valid, fill).to_numpy(), (~valid).to_numpy()])
+    names.extend(["sex", "sex_missing"])
+    groups["sex"] = ["sex", "sex_missing"]
+    stats["sex"] = {"training_mode": fill}
+    prior_audit = None
+    if feature_set == "F2" or (feature_set == "expanded" and cfg["features"]["prior_history"]):
+        if not cfg["features"]["prior_history"]:
+            raise ValueError("Enable and audit prior_history explicitly before F2")
+        prior, prior_audit = prior_diagnoses(full, cfg["data"]["root"])
+        prior_names = ["prior_" + c for c in CLASSES] + ["history_missing"]
+        raw.extend(prior.T)
+        names.extend(prior_names)
+        groups["history"] = prior_names
+    if feature_set == "expanded":
+        height = pd.to_numeric(
+            full.get("height", pd.Series(np.nan, index=full.index)), errors="coerce"
         )
-        for s, ds in datasets.items()
-    }
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/local.yaml")
-    parser.add_argument("--root", help="Raw PTB-XL folder")
-    parser.add_argument(
-        "--audit", action="store_true", help="Check raw ECGs without preparing arrays"
-    )
-    args = parser.parse_args()
-
-    config = load_config(args.config)
-    if args.root:
-        config["data"]["root"] = args.root
-
-    with FileLock(".pipeline.lock", timeout=0):
-        if args.audit:
-            audit(config)
+        weight = pd.to_numeric(
+            full.get("weight", pd.Series(np.nan, index=full.index)), errors="coerce"
+        )
+        height, weight = (
+            height.where(height.between(50, 250)),
+            weight.where(weight.between(10, 400)),
+        )
+        for name, values in (
+            ("height", height),
+            ("weight", weight),
+            ("bmi", weight / (height / 100) ** 2),
+        ):
+            continuous(name, values)
+        rr_key = digest(
+            {"cohort": base["cohort"], "splits": splits, "history": cfg["data"]["history"]}
+        )
+        rr_path = cache / f"observed_rr_{rr_key[:12]}.npy"
+        receipt = rr_path.with_suffix(".json")
+        if receipt.exists() and read_json(receipt).get("identity") == rr_key:
+            if file_hash(rr_path) != read_json(receipt)["sha256"]:
+                raise ValueError("Observed RR cache changed")
+            rr = np.load(rr_path)
         else:
-            preprocess(config)
+            values = []
+            for split in splits:
+                waves = np.load(cache / f"waves_{split}.npy", mmap_mode="r")
+                values.extend(observed_rr(w[: cfg["data"]["history"]]) for w in waves)
+            rr = np.asarray(values)
+            np.save(rr_path, rr)
+            write_json(receipt, {"identity": rr_key, "sha256": file_hash(rr_path)})
+        for i, name in enumerate(("heart_rate", "rr_mean", "rr_std")):
+            continuous(name, rr[:, i])
+    matrix = np.column_stack(raw).astype(np.float32)
+    arrays = {s: matrix[full.split.eq(s)].copy() for s in splits}
+    return (
+        arrays,
+        names,
+        {
+            "groups": groups,
+            "statistics": stats,
+            "prior_audit": prior_audit,
+            "fitted_split": "train",
+            "cohort": base["cohort"],
+        },
+    )

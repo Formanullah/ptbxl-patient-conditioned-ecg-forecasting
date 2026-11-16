@@ -1,0 +1,131 @@
+{
+  "method": "mrmr",
+  "fingerprint": "cdf7072d8cc86c1833095529c1bc63f970e8a676b6839a874f7d74d5ea99c442",
+  "selected_groups": [
+    "age",
+    "height",
+    "rr_mean"
+  ],
+  "selected_features": [
+    "age_scaled",
+    "age_missing",
+    "height",
+    "height_missing",
+    "rr_mean",
+    "rr_mean_missing"
+  ],
+  "ranking": [
+    {
+      "group": "age",
+      "rank": 1,
+      "relevance_MI": 0.1752232024639336,
+      "redundancy_MI": 0.0,
+      "mrmr_score": 0.1752232024639336
+    },
+    {
+      "group": "height",
+      "rank": 2,
+      "relevance_MI": 0.0894408393447445,
+      "redundancy_MI": 0.06028335258767238,
+      "mrmr_score": 0.029157486757072124
+    },
+    {
+      "group": "rr_mean",
+      "rank": 3,
+      "relevance_MI": 0.14737515782657684,
+      "redundancy_MI": 0.08580968089190127,
+      "mrmr_score": 0.06156547693467557
+    },
+    {
+      "group": "history",
+      "rank": 4,
+      "relevance_MI": 0.055660080342051894,
+      "redundancy_MI": 0.04249874959940575,
+      "mrmr_score": 0.013161330742646145
+    },
+    {
+      "group": "rr_std",
+      "rank": 5,
+      "relevance_MI": 0.1255646027570854,
+      "redundancy_MI": 0.09348383132504978,
+      "mrmr_score": 0.03208077143203561
+    },
+    {
+      "group": "weight",
+      "rank": 6,
+      "relevance_MI": 0.0946489538847778,
+      "redundancy_MI": 0.07880517430810675,
+      "mrmr_score": 0.015843779576671047
+    },
+    {
+      "group": "sex",
+      "rank": 7,
+      "relevance_MI": 0.028435779439713465,
+      "redundancy_MI": 0.02064779110358274,
+      "mrmr_score": 0.007787988336130727
+    },
+    {
+      "group": "heart_rate",
+      "rank": 8,
+      "relevance_MI": 0.14783326225799562,
+      "redundancy_MI": 0.1399876440721083,
+      "mrmr_score": 0.007845618185887304
+    },
+    {
+      "group": "bmi",
+      "rank": 9,
+      "relevance_MI": 0.08249438822854858,
+      "redundancy_MI": 0.10837450608076601,
+      "mrmr_score": -0.02588011785221743
+    }
+  ],
+  "groups": {
+    "age": [
+      "age_scaled",
+      "age_missing"
+    ],
+    "sex": [
+      "sex_encoded",
+      "sex_missing"
+    ],
+    "history": [
+      "prior_NORM",
+      "prior_MI",
+      "prior_STTC",
+      "prior_CD",
+      "prior_HYP",
+      "history_missing"
+    ],
+    "height": [
+      "height",
+      "height_missing"
+    ],
+    "weight": [
+      "weight",
+      "weight_missing"
+    ],
+    "bmi": [
+      "bmi",
+      "bmi_missing"
+    ],
+    "heart_rate": [
+      "heart_rate",
+      "heart_rate_missing"
+    ],
+    "rr_mean": [
+      "rr_mean",
+      "rr_mean_missing"
+    ],
+    "rr_std": [
+      "rr_std",
+      "rr_std_missing"
+    ]
+  },
+  "fitted_split": "train",
+  "target": "24 future RMS/difference-RMS summaries in mV",
+  "estimator": "8-bin training quantile mutual information; grouped MID criterion",
+  "training_windows": 228,
+  "training_patients": 64,
+  "used_test": false,
+  "used_validation": false
+}

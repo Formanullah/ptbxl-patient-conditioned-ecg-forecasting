@@ -1,0 +1,8 @@
+# Editable primary local experiment: 100 Hz, 5 s input, 3 s forecast.
+# study.yaml selects the smaller measured CPU development cohort.
+extends: research.yaml
+profile: research_100hz_local
+paths:
+  experiments: experiments/research_100hz_local
+  outputs: outputs/research_100hz_local
+  documents: Project_Documents/research_100hz_local

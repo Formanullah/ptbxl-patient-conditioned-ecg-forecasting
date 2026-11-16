@@ -1,0 +1,12 @@
+# Complete new 100 Hz cohort. Fold 10 stays blocked until final selection is frozen.
+extends: research.yaml
+profile: research_100hz_full
+data:
+  cache: data/research_100hz_full_p0
+subset:
+  mode: full
+  seed: 42
+paths:
+  experiments: experiments/research_100hz_full
+  outputs: outputs/research_100hz_full
+  documents: Project_Documents/research_100hz_full

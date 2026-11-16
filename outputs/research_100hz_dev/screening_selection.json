@@ -1,0 +1,24 @@
+{
+  "lstm": {
+    "nominal_best": "lstm_huber",
+    "nominal_mae": 0.10785194686362991,
+    "selected": "p3_lstm",
+    "selected_mae": 0.10793120547838009,
+    "parameters": 978384,
+    "equivalence_tolerance_mV": 0.0005,
+    "source_checkpoint_sha256": "9506da5c437994a5843e6afc55221f9e54e934a8c6b433da11da99360aab2b8d",
+    "reason": "Within declared MAE tolerance, prefer fewer parameters; ties use MAE",
+    "used_test": false
+  },
+  "cnn_lstm": {
+    "nominal_best": "cnn_ecg",
+    "nominal_mae": 0.10784854312169785,
+    "selected": "cnn_ecg",
+    "selected_mae": 0.10784854312169785,
+    "parameters": 1017072,
+    "equivalence_tolerance_mV": 0.0005,
+    "source_checkpoint_sha256": "5177adf009f9506d6ba86e58c8dcc6e2346ad68c672ecf9e6c88621c67766f26",
+    "reason": "Within declared MAE tolerance, prefer fewer parameters; ties use MAE",
+    "used_test": false
+  }
+}

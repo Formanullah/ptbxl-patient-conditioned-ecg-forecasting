@@ -1,0 +1,62 @@
+# Primary new protocol. Explicit manual commands; no test evaluation during development.
+profile: research_100hz_pilot
+data:
+  root: PTB-XL
+  cache: data/research_100hz_pilot_p0
+  sampling_rate: 100
+  history_seconds: 5.0
+  horizon_seconds: 3.0
+  window_stride_seconds: 1.0
+  start: 0
+  layout: time_first
+subset:
+  mode: pilot
+  seed: 42
+  patients: {train: 450, val: 100, test: 100}
+preprocessing:
+  filter: none
+  scaling: zscore
+  order: 4
+  low_hz: 0.5
+  high_hz: 40.0
+features: {}
+model:
+  hidden: 128
+  depth: 2
+  dropout: 0.2
+  static_embedding: 32
+  fusion: late
+  kernels: [7, 5, 3]
+  pool: 2
+  residual: false
+  head_width: 256
+training:
+  seed: 42
+  epochs: 60
+  early_stopping: false
+  patience: 10
+  batch_size: 64
+  lr: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  num_workers: 0
+  threads: 4
+  device: auto
+  loss: mse
+  derivative_weight: 0.0
+  spectral_weight: 0.0
+  scheduler: none
+contrastive:
+  weight: 0.1
+  temperature: 0.1
+  jitter_std: 0.01
+  gain_min: 0.95
+  gain_max: 1.05
+evaluation:
+  bootstrap_samples: 1000
+  peak_tolerance_ms: 100
+  allow_test: false
+paths:
+  experiments: experiments/research_100hz_pilot
+  outputs: outputs/research_100hz_pilot
+  documents: Project_Documents/research_100hz

@@ -1,0 +1,39 @@
+{
+  "fingerprint": "cdf7072d8cc86c1833095529c1bc63f970e8a676b6839a874f7d74d5ea99c442",
+  "checks": [
+    "PASS: patient_id is isolated between splits",
+    "PASS: ecg_id is isolated between splits",
+    "PASS: window_id is isolated between splits",
+    "PASS: one validation/test window per recording",
+    "PASS: normalization refits exactly from training observed windows",
+    "PASS: age imputation matches selected training records only",
+    "PASS: future mutation cannot alter none inputs, RR features or contrastive views",
+    "PASS: future mutation cannot alter highpass inputs, RR features or contrastive views",
+    "PASS: future mutation cannot alter bandpass inputs, RR features or contrastive views",
+    "PASS: fold-10 evaluation is blocked during development"
+  ],
+  "passed": true,
+  "splits": {
+    "train": {
+      "patients": 64,
+      "records": 76,
+      "windows": 228,
+      "ids_sha256": "5ddfaa672c3d954e9e3761e7ddb877267e8635169b9562b4a37a6c624559e753",
+      "window_ids_sha256": "65a7bb029954814e97dcee68a4bb41d5b5347790a3dcb59cdf9b5468463b7b8e"
+    },
+    "val": {
+      "patients": 24,
+      "records": 25,
+      "windows": 25,
+      "ids_sha256": "dea2598b10ec31eb8d6de20f8a124c714fb0d1f41c5abecea7a661d2c62ab290",
+      "window_ids_sha256": "bc34b515644ca865a7c1e1c09a7e8095caafb79f791c352d756479af1e32c547"
+    },
+    "test": {
+      "patients": 16,
+      "records": 19,
+      "windows": 19,
+      "ids_sha256": "6844d0c4459f47b26d652dbf8ba844df06106ccda3a2ed14b03876a5bbba9de6",
+      "window_ids_sha256": "463456073848d143dacd023f0d7c4e767f60b2592f00f33d2fdfdefde1e8217a"
+    }
+  }
+}

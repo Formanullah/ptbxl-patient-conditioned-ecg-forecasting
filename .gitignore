@@ -4,8 +4,9 @@
 /experiments/
 /outputs/*
 !/outputs/pilot/
-/outputs/pilot/*.zip
+!/outputs/research_100hz_dev/
 /outputs/pilot/smoke/
+.DS_Store
 __pycache__/
 *.py[cod]
 *.egg-info/

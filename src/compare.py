@@ -1,144 +1,244 @@
-"""Compare evaluated models and patient-bootstrap confidence intervals."""
+"""Aggregate only traceable measurements and identify controlled comparisons."""
 
-import argparse
-from pathlib import Path
+from itertools import combinations
 
-import numpy as np
 import pandas as pd
 
-from config import load_config, read_json
-from evaluate import save_figure
+from config import digest, file_hash, protocol, read_json, study_dir
+from evaluate import verify_evaluation
+from metrics import bootstrap_pair
+
+RESULT_COLUMNS = [
+    "name",
+    "state",
+    "split",
+    "architecture",
+    "preprocessing",
+    "feature_set",
+    "mae_mV",
+    "rmse_mV",
+    "patient_macro_mae_mV",
+    "mse_mV2",
+    "r2",
+    "pearson_mean",
+    "records",
+    "patients",
+    "seed",
+    "lr",
+    "hidden",
+    "epochs_completed",
+    "best_epoch",
+    "runtime_seconds",
+]
 
 
-def bootstrap_pair(a, b, samples=1000, seed=42):
-    """Paired patient-macro MAE delta B minus A; negative favors B."""
-    if set(a.ecg_id) != set(b.ecg_id):
-        raise ValueError("Cannot pair different test record sets")
-    joined = a[["ecg_id", "patient_id", "mae_mV"]].merge(
-        b[["ecg_id", "patient_id", "mae_mV"]],
-        on="ecg_id",
-        suffixes=("_a", "_b"),
-        validate="one_to_one",
-    )
-    if not joined.patient_id_a.equals(joined.patient_id_b):
-        raise ValueError("Patient assignments differ between runs")
-    joined["delta"] = joined.mae_mV_b - joined.mae_mV_a
-    delta = joined.groupby("patient_id_a").delta.mean().to_numpy()
-    rng = np.random.default_rng(seed)
-    boots = np.empty(samples)
-    for i in range(samples):
-        boots[i] = rng.choice(delta, size=len(delta), replace=True).mean()
-    return {
-        "delta_patient_macro_mae_mV": float(delta.mean()),
-        "ci95_low": float(np.quantile(boots, 0.025)),
-        "ci95_high": float(np.quantile(boots, 0.975)),
-        "patients": len(delta),
-        "bootstrap_samples": samples,
-    }
-
-
-def compare_runs(cfg):
-    import matplotlib.pyplot as plt
-
-    root = Path(cfg["paths"]["experiments"])
-    out = Path(cfg["paths"]["outputs"])
-    out.mkdir(parents=True, exist_ok=True)
-    rows, fingerprints = [], set()
-    for run in sorted(root.iterdir()):
-        if not (run / "test_metrics.json").exists():
+def collect(cfg):
+    root = study_dir(cfg) / cfg["run_mode"]
+    rows, lead_frames, records = [], [], {}
+    for directory in sorted((root / "checkpoints").glob("*")):
+        if not (directory / "run.json").exists():
             continue
-        metrics, config = read_json(run / "test_metrics.json"), read_json(run / "config.json")
-        if config.get("smoke"):
-            continue
-        fingerprints.add(metrics["fingerprint"])
-        rows.append(
-            {
-                "run": run.name,
-                **{
-                    k: metrics[k]
-                    for k in (
-                        "mae",
-                        "rmse",
-                        "mse",
-                        "r2",
-                        "pearson_mean",
-                        "patient_macro_mae",
-                        "n_test_records",
-                        "n_test_patients",
+        record = read_json(directory / "run.json")
+        row = {
+            "name": directory.name,
+            "state": "training incomplete",
+            "architecture": record["architecture"],
+            "preprocessing": record["preprocessing"],
+            "feature_set": record["feature_set"],
+            "parameters": record["parameters"],
+            "seed": record["config"]["training"]["seed"],
+            "lr": record["config"]["training"]["lr"],
+            "hidden": record["config"]["model"]["hidden"],
+            "smoke": record["smoke"],
+        }
+        if (directory / "status.json").exists():
+            state = read_json(directory / "status.json")
+            row.update(
+                state=state["state"],
+                epochs_completed=state["epochs_completed"],
+                runtime_seconds=state["runtime_seconds"],
+            )
+        for split in ("val", "test"):
+            path = root / "metrics" / directory.name / f"{split}.json"
+            if not path.exists():
+                continue
+            metrics = read_json(path)
+            try:
+                verify_evaluation(path.parent, split)
+                evidence_valid = True
+            except (ValueError, FileNotFoundError):
+                evidence_valid = False
+            valid = (
+                record["signature"] == digest(record["scientific"])
+                and evidence_valid
+                and metrics["cohort"] == record["scientific"]["cohort"]
+                and metrics["run_signature"] == record["signature"]
+                and metrics["protocol"] == protocol(cfg)
+                and (directory / "best.pt").exists()
+                and metrics["checkpoint_sha256"] == file_hash(directory / "best.pt")
+                and (directory / "cohort_manifest.json").exists()
+                and (directory / "scaler.json").exists()
+                and file_hash(directory / "scaler.json") == record["scientific"]["scaler_sha256"]
+            )
+            entry = {**row, "split": split}
+            if not valid:
+                entry["state"] = "incompatible or unavailable provenance"
+            elif row["state"] != "completed":
+                entry["state"] = "training incomplete"
+            elif metrics["smoke"]:
+                if not metrics["synthetic"]:
+                    entry.update(metrics)
+                entry["state"] = "software smoke check passed; excluded from research comparison"
+            else:
+                entry.update(metrics, state="measured")
+                lead_frames.append(
+                    pd.read_csv(path.with_name(f"{split}_leads.csv")).assign(
+                        name=directory.name, split=split
                     )
-                },
-                "epochs": metrics.get("epochs_completed", 0),
-                "best_epoch": metrics.get("best_epoch"),
-                "training_seconds": metrics.get("training_seconds", 0),
-                "parameters": metrics.get("parameters", 0),
+                )
+                records[(directory.name, split)] = record
+            rows.append(entry)
+        if not any(
+            (root / "metrics" / directory.name / f"{s}.json").exists() for s in ("val", "test")
+        ):
+            rows.append(row)
+    for name in ("persistence", "repeat_window"):
+        for split in ("val", "test"):
+            path = root / "metrics" / name / f"{split}.json"
+            if path.exists():
+                result = read_json(path)
+                try:
+                    verify_evaluation(path.parent, split)
+                except (ValueError, FileNotFoundError):
+                    rows.append(
+                        {
+                            "name": name,
+                            "split": split,
+                            "state": "incompatible or unavailable provenance",
+                        }
+                    )
+                    continue
+                if result["smoke"] and not result["synthetic"]:
+                    rows.append(
+                        {
+                            **result,
+                            "state": "software smoke check passed; excluded from research comparison",
+                        }
+                    )
+                elif not result["smoke"] and result["protocol"] == protocol(cfg):
+                    rows.append(
+                        {**result, "state": "measured", "epochs_completed": 0, "best_epoch": None}
+                    )
+                    lead_frames.append(
+                        pd.read_csv(path.with_name(f"{split}_leads.csv")).assign(
+                            name=name, split=split
+                        )
+                    )
+    table = pd.DataFrame(rows).reindex(
+        columns=list(dict.fromkeys(RESULT_COLUMNS + [k for r in rows for k in r]))
+    )
+    leads = (
+        pd.concat(lead_frames, ignore_index=True)
+        if lead_frames
+        else pd.DataFrame(columns=["name", "split", "lead", "mae_mV", "rmse_mV", "pearson"])
+    )
+    return table, leads, records
+
+
+def paired_comparisons(cfg, table, records):
+    output = []
+    candidates = table.loc[table.state.eq("measured")].to_dict("records")
+    for a, b in combinations(candidates, 2):
+        if (
+            a["split"] != b["split"]
+            or a["cohort"] != b["cohort"]
+            or a["target_sha256"] != b["target_sha256"]
+        ):
+            continue
+        ra, rb = records.get((a["name"], a["split"])), records.get((b["name"], b["split"]))
+        contrast = None
+        if ra is None or rb is None:
+            if (ra is None) != (rb is None):
+                contrast = "neural pipeline versus raw-history baseline"
+                if rb is None:
+                    a, b = b, a
+        else:
+            sa, sb = ra["scientific"], rb["scientific"]
+            controls = (
+                "cohort",
+                "model",
+                "training",
+                "budget",
+                "source",
+                "versions",
+                "scaler_sha256",
+            )
+            same_model = a["architecture"] == b["architecture"]
+            same_features = sa["features"] == sb["features"]
+            same_filter = a["preprocessing"] == b["preprocessing"]
+            matched = all(sa[k] == sb[k] for k in controls)
+            if not matched:
+                if cfg["run_mode"] == "full" and not same_model and same_filter:
+                    contrast = "selected pipelines (architecture and recipe may differ)"
+                elif (
+                    same_model
+                    and same_filter
+                    and same_features
+                    and sa["model"] == sb["model"]
+                    and (
+                        {k: v for k, v in sa["training"].items() if k != "lr"}
+                        == {k: v for k, v in sb["training"].items() if k != "lr"}
+                    )
+                    and all(sa[k] == sb[k] for k in controls if k != "training")
+                ):
+                    contrast = "learning-rate comparison"
+            elif same_model and same_features and not same_filter:
+                contrast = "P0 versus P1"
+                if a["preprocessing"] == "P1":
+                    a, b = b, a
+            elif same_model and same_filter and not same_features:
+                contrast = "static-feature ablation"
+                priority = {"F0": 0, "F1": 1, "expanded": 2, "mrmr": 3, "permutation": 3}
+                if priority.get(a["feature_set"], 2) > priority.get(b["feature_set"], 2):
+                    a, b = b, a
+            elif not same_model and same_features and same_filter:
+                contrast = "matched architecture comparison"
+        if contrast is None:
+            continue
+        root = study_dir(cfg) / cfg["run_mode"] / "metrics"
+        first = pd.read_csv(root / a["name"] / f"{a['split']}_records.csv")
+        second = pd.read_csv(root / b["name"] / f"{b['split']}_records.csv")
+        comparison = bootstrap_pair(
+            first, second, cfg["evaluation"]["bootstrap_samples"], cfg["training"]["seed"]
+        )
+        denominator = a["patient_macro_mae_mV"]
+        output.append(
+            {
+                "A": a["name"],
+                "B": b["name"],
+                "split": a["split"],
+                "contrast": contrast,
+                "percentage_B_minus_A": 100
+                * (b["patient_macro_mae_mV"] - denominator)
+                / denominator
+                if denominator > 1e-12
+                else None,
+                **comparison,
             }
         )
-    if len(fingerprints) > 1:
-        raise ValueError("Refusing comparison of mismatched protocols/caches")
-    if not rows:
-        raise ValueError("No measured full-data results found")
-    table = pd.DataFrame(rows)
-    table.to_csv(out / "model_comparison.csv", index=False)
-    fig, ax = plt.subplots(figsize=(11, 6))
-    display = table.copy()
-    display["label"] = display.run.map(
-        lambda name: (
-            name.replace("cnn_lstm_", "CNN-LSTM / ")
-            .replace("lstm_", "LSTM / ")
-            .replace("patient_history_contrastive", "History + contrastive")
-            .replace("patient_history", "History")
-            .replace("ecg_only", "ECG only")
-            .replace("demographics", "Demographics")
-            .replace("repeat_window", "Repeated window")
-            .replace("persistence", "Persistence")
-        )
+    return pd.DataFrame(
+        output,
+        columns=[
+            "A",
+            "B",
+            "split",
+            "contrast",
+            "percentage_B_minus_A",
+            "difference_B_minus_A_mV",
+            "ci95_low",
+            "ci95_high",
+            "patients",
+            "bootstrap_samples",
+            "conclusion",
+        ],
     )
-    display.set_index("label")[["mae", "rmse"]].rename(
-        columns={"mae": "MAE", "rmse": "RMSE"}
-    ).plot.barh(ax=ax)
-    ax.invert_yaxis()
-    ax.set(
-        xlabel="Error (mV)",
-        ylabel="",
-        title="Small-data pilot: held-out patients"
-        if cfg.get("subset")
-        else "Held-out patient test fold",
-    )
-    save_figure(fig, out / "model_comparison.png")
-    names = set(table.run)
-    pairs = []
-    for architecture in ("lstm", "cnn_lstm"):
-        pairs += [
-            (f"{architecture}_ecg_only", f"{architecture}_demographics", "demographics"),
-            (f"{architecture}_demographics", f"{architecture}_patient_history", "history"),
-            (
-                f"{architecture}_patient_history",
-                f"{architecture}_patient_history_contrastive",
-                "contrastive",
-            ),
-        ]
-    pairs += [
-        (f"lstm_{v}", f"cnn_lstm_{v}", "architecture")
-        for v in ("ecg_only", "demographics", "patient_history", "patient_history_contrastive")
-    ]
-    comparisons = []
-    for a, b, effect in pairs:
-        if a in names and b in names:
-            result = bootstrap_pair(
-                pd.read_csv(root / a / "per_record_metrics.csv"),
-                pd.read_csv(root / b / "per_record_metrics.csv"),
-                cfg["evaluation"]["bootstrap_samples"],
-                cfg["training"]["seed"],
-            )
-            comparisons.append({"effect": effect, "A": a, "B": b, **result})
-    pd.DataFrame(comparisons).to_csv(out / "paired_patient_bootstrap.csv", index=False)
-    return table
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/local.yaml")
-    args = parser.parse_args()
-
-    config = load_config(args.config)
-    print(compare_runs(config).to_string(index=False))
