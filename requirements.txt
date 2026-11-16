@@ -8,3 +8,5 @@ PyYAML>=6
 filelock>=3
 pytest>=8
 ruff>=0.9
+jupyterlab
+jupyter
