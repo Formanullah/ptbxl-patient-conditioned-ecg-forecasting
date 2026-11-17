@@ -19,7 +19,8 @@ python src/pipeline.py smoke
 python src/pipeline.py report
 ```
 
-`configs/config.yaml` is the active configuration. Pilot mode defaults to 300
+`configs/config.yaml` is the default CLI configuration and selects study
+`primary_7s3s_v3` in pilot mode. Pilot mode defaults to 300
 training and 75 validation patients, retaining all their ECGs, for two epochs.
 Pilot/synthetic scores are software diagnostics, not research evidence. Test
 waveforms are not prepared or loaded in this workflow.
@@ -76,25 +77,71 @@ Local runs do not mount Google Drive. By default they save caches in
 `data/study_v3/` and outputs in `results/<study_id>/`.
 
 In Colab, set `DRIVE_PROJECT` or upload the source ZIP and choose Drive data
-or the official PhysioNet download of `records100` only. Both environments
-start in pilot mode. The first cell controls patient counts for pilot and
-medium screening; use a new `STUDY_ID` when changing the cohort. Section 4
+or the official PhysioNet download of `records100` only. The notebook currently
+defaults to `RUN_MODE='full'`, `EPOCHS=120`, `STUDY_ID='primary_7s3s_v5'`,
+`ALLOW_FULL_CPU=True`, and `FINAL_TEST=False`. For a quick software check, set
+`RUN_MODE='pilot'`; this uses the two-epoch pilot budget. The first cell controls
+patient counts for pilot and medium screening; use a new `STUDY_ID` when changing
+the cohort. Section 4
 shows the resulting ECG and patient counts, including reserved test metadata.
 Full mode uses the official full cohorts and requires CUDA unless explicitly
 enabled on CPU. Results are exported as `PTBXL_Research_Results.zip`.
 
 ## Results and verification
 
-The [CPU pilot report](docs/RESULTS.md) covers six two-epoch runs on 339 training
-and 81 validation ECGs. Fold 10 remained unopened. All 26 acceptance tests
-passed, and an isolated kernel executed all 11 notebook code cells on synthetic
-data. Synthetic checks also exercised screening, tuning, both feature-selection
-methods, and final-test locking. A checksum-verified official download and WFDB
-decode were tested for one 100-Hz record.
+The [research report](docs/RESULTS.md) now covers the completed full-population
+study `primary_7s3s_v5`. Saved artifacts record real-data screening, learning-rate
+tuning, and both feature-selection extensions, with 16 completed 60-epoch medium
+runs. The medium cohort contains 1,731 ECGs from 1,500 training patients and
+2,183 ECGs from all 1,942 official validation patients.
 
-Real-data screening, tuning, feature selection, the four 120-epoch GPU runs, and
-locked final scoring are pending. Pilot and synthetic scores do not rank the
-research conditions.
+All four full-population conditions completed 120 epochs on **CPU**, with
+`allow_full_cpu` explicitly enabled. Training used 17,418 ECGs from 15,023
+patients; validation used 2,183 ECGs from 1,942 patients. All four selected
+recipes use F0 (ECG-only inputs). Validation selects the best checkpoint within
+each completed run, so its selected epoch can precede epoch 120.
+
+| Condition | Learning rate | Selected epoch | Validation patient-macro MAE (mV) | Validation RMSE (mV) |
+| --- | --- | --- | --- | --- |
+| CNN-LSTM, raw history (P0), F0 | 0.001 | 116 | 0.105195 | 0.226551 |
+| CNN-LSTM, causal filter (P1), F0 | 0.001 | 43 | 0.108725 | 0.227847 |
+| LSTM, raw history (P0), F0 | 0.0005 | 29 | 0.111099 | 0.234362 |
+| LSTM, causal filter (P1), F0 | 0.0005 | 99 | 0.110185 | 0.231235 |
+| Persistence baseline | — | — | 0.160367 | 0.314331 |
+| Repeat-window baseline | — | — | 0.170786 | 0.326306 |
+
+Raw-input CNN-LSTM has the lowest validation patient-macro MAE, approximately
+34.4% below persistence. Filtering increased CNN-LSTM error by approximately
+3.36% and reduced LSTM error by approximately 0.82%. These are validation
+results from one training seed; they do not establish clinical usefulness.
+Pilot and synthetic scores remain excluded from research rankings.
+
+The four-condition selection is frozen in
+`results/primary_7s3s_v5/full/selection.json`. Final fold-10 scoring is pending:
+there is no completed test ledger, and the reserved 2,198 ECGs from 1,904
+patients have not been prepared for this study. Enabling final scoring requires
+the saved study configuration and frozen artifacts.
+
+The default CLI configuration still targets the earlier pilot study. To report
+or export the completed study from this local checkout, use its saved configuration:
+
+```sh
+python src/pipeline.py report --config results/primary_7s3s_v5/notebook_configuration.json --mode full
+python src/pipeline.py export --config results/primary_7s3s_v5/notebook_configuration.json --mode full
+```
+
+`results/`, dataset caches, and model weights are excluded from Git; the commands
+above require the local artifacts. The tracked report in `docs/RESULTS.md`
+contains the recorded results for readers without those files.
+
+Verification on 17 November 2026 with `python src/run_tests.py -q` returned
+**27 passed, 1 failed**. The failing test,
+`test_notebook_schema_plain_python_and_shared_code`, expects the notebook to
+default to `RUN_MODE = 'pilot'`; its current setting is `full`. The remaining
+tests passed, including patient isolation, causal preprocessing, training-only
+transforms, checkpoint/RNG recovery, metrics, and final-test locking. All four
+full-run source fingerprints match the current `src/` files, and their saved
+evaluation receipts and checkpoint provenance passed the report collector's checks.
 
 The shared CLI is `src/pipeline.py`; the notebook calls the same experiment code.
 See [methodology](docs/METHODOLOGY.md), [equations](docs/EQUATIONS.md), and the
