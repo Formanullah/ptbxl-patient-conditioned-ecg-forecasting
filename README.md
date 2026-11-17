@@ -66,29 +66,38 @@ results, checkpoints, figures and manifests live under `results/<study_id>/`.
 
 ## Notebook: local or Colab
 
-Open `notebooks/PTBXL_Full_Colab_GPU.ipynb` in Jupyter or VS Code and select
-the Python kernel with this project's dependencies. On Windows, use
-`.venv\Scripts\python.exe` if you already have the project environment. The
-notebook finds the project root automatically when you start it there or under
-`notebooks/`. Otherwise set `LOCAL_PROJECT_DIR` in the first cell. Set
-`LOCAL_DATA_ROOT` if the dataset is outside the project's `PTB-XL/` folder.
-Local runs do not mount Google Drive. By default they save caches in
-`data/study_v3/` and outputs in `results/<study_id>/`.
+Open `notebooks/PTBXL_Full_Colab_GPU.ipynb` in Colab, Jupyter or VS Code. The
+notebook includes its Python code, configuration and dependency list. It does
+not need a project ZIP, checkout, `src/` folder or external YAML file.
+All notebook directory settings are grouped under **Paths** in the first cell.
 
-In Colab, set `DRIVE_PROJECT` or upload the source ZIP and choose Drive data
-or the official PhysioNet download of `records100` only. Both environments
-start in pilot mode. The first cell controls patient counts for pilot and
-medium screening; use a new `STUDY_ID` when changing the cohort. Section 4
-shows the resulting ECG and patient counts, including reserved test metadata.
-Full mode uses the official full cohorts and requires CUDA unless explicitly
-enabled on CPU. Results are exported as `PTBXL_Research_Results.zip`.
+In Colab, upload just the notebook, run the settings, and run **Check the
+dataset** before training. The default uses `My Drive/Colab Notebooks/PTB-XL`.
+The check displays a **Loaded** column, reads the metadata, and checks that one
+training record's waveform files are readable. Change `DRIVE_DATA_ROOT` for a
+different Drive folder, or set `DATA_SOURCE='physionet'` to download the official
+100 Hz dataset instead. Set `SAVE_TO_DRIVE=True` for results that persist after
+a runtime reset. Otherwise download `PTBXL_Research_Results.zip` from the Colab
+Files pane before disconnecting.
+
+Locally, select a kernel with the dependencies installed or set
+`INSTALL_DEPENDENCIES=True`. Point `LOCAL_DATA_ROOT` at the extracted PTB-XL
+folder or choose `DATA_SOURCE='physionet'`. Local results go under
+`results/<study_id>/` by default.
+
+Both environments start in pilot mode. Set patient counts in the first cell
+and use a new `STUDY_ID` when changing the cohort. Section 4 displays ECG and
+patient counts, including reserved test metadata. Full mode uses the official
+full cohorts and requires CUDA unless explicitly enabled on CPU.
+
+The standalone notebook saves the source of its implementation cells with the
+run. Its checkpoints use notebook provenance and are separate from CLI runs.
 
 ## Results and verification
 
 The [CPU pilot report](docs/RESULTS.md) covers six two-epoch runs on 339 training
 and 81 validation ECGs. Fold 10 remained unopened. All 26 acceptance tests
-passed, and an isolated kernel executed all 11 notebook code cells on synthetic
-data. Synthetic checks also exercised screening, tuning, both feature-selection
+passed. Synthetic checks also exercised screening, tuning, both feature-selection
 methods, and final-test locking. A checksum-verified official download and WFDB
 decode were tested for one 100-Hz record.
 
@@ -96,7 +105,8 @@ Real-data screening, tuning, feature selection, the four 120-epoch GPU runs, and
 locked final scoring are pending. Pilot and synthetic scores do not rank the
 research conditions.
 
-The shared CLI is `src/pipeline.py`; the notebook calls the same experiment code.
+The CLI is `src/pipeline.py`. The notebook includes the same study logic in its
+own cells so it can run independently.
 See [methodology](docs/METHODOLOGY.md), [equations](docs/EQUATIONS.md), and the
 [data dictionary](docs/DATA_DICTIONARY.md). The [historical archive](archive/legacy_2ad3e68/README_ARCHIVE.md)
 explains earlier protocols and which old reports lack supporting artifacts.

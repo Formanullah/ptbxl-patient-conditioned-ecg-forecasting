@@ -1,10 +1,11 @@
-"""Execute the unchanged notebook in a fresh kernel with an isolated synthetic dataset."""
+"""Execute the standalone notebook in a fresh kernel without project files."""
 
 import argparse
 import json
 import os
 import sys
 from pathlib import Path
+from shutil import copy2
 
 import nbformat
 from nbclient import NotebookClient
@@ -44,15 +45,21 @@ def main():
     env["JUPYTER_PATH"] = str(spec_root)
     os.environ["JUPYTER_PATH"] = str(spec_root)
     env["PTBXL_NOTEBOOK_FIXTURE"] = str(args.work / "fixture")
-    env["PTBXL_NOTEBOOK_PROJECT"] = str(project)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    notebook = nbformat.read(project / "notebooks/PTBXL_Full_Colab_GPU.ipynb", as_version=4)
+    env.pop("PYTHONPATH", None)
+    execution_dir = args.work / "standalone"
+    execution_dir.mkdir(exist_ok=True)
+    if any((execution_dir / name).exists() for name in ("src", "configs", "requirements.txt")):
+        raise ValueError("Notebook validation must run without access to project files in its cwd")
+    path = "notebooks/PTBXL_Full_Colab_GPU.ipynb"
+    copied = copy2(project / path, execution_dir)
+    notebook = nbformat.read(copied, as_version=4)
     nbformat.validate(notebook)
     client = NotebookClient(
         notebook,
         timeout=600,
         kernel_name="ptbxl-validation",
-        resources={"metadata": {"path": str(args.work)}},
+        resources={"metadata": {"path": str(execution_dir)}},
         allow_errors=False,
     )
     client.execute(env=env)

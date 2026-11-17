@@ -311,7 +311,7 @@ def test_legacy_config_rejected():
         load_config("archive/legacy_2ad3e68/configs/pilot.yaml")
 
 
-def test_notebook_schema_plain_python_and_shared_code():
+def test_notebook_contains_implementation_without_project_imports():
     import ast
 
     import nbformat
@@ -320,10 +320,19 @@ def test_notebook_schema_plain_python_and_shared_code():
     notebook = nbformat.read(path, as_version=4)
     nbformat.validate(notebook)
     source = "\n".join(c.source for c in notebook.cells if c.cell_type == "code")
+    project_modules = {p.stem for p in Path("src").glob("*.py")} | {"models"}
     for cell in notebook.cells:
         if cell.cell_type == "code":
-            ast.parse(cell.source)
-    assert "from models.lstm import LSTMForecaster" in source
-    assert "class LSTM" not in source and "class CNN" not in source
+            tree = ast.parse(cell.source)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom):
+                    assert node.level == 0 and node.module.split(".")[0] not in project_modules
+                elif isinstance(node, ast.Import):
+                    assert all(
+                        alias.name.split(".")[0] not in project_modules for alias in node.names
+                    )
+    assert "class LSTMForecaster" in source and "class CNNLSTMForecaster" in source
+    assert "def prepare(" in source and "def train_run(" in source
+    assert "requirements.txt" not in source and "configs/config.yaml" not in source
     assert "RUN_MODE = 'pilot'" in source and "FINAL_TEST = False" in source
     assert "records500" not in source
