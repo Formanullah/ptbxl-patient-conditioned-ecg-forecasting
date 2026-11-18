@@ -150,3 +150,135 @@ def run_figures(cfg, cache, run, split="val"):
         "MAE and RMSE are shown in mV for each of the twelve leads.",
         "Differences show absolute voltage errors; low error does not prove accurate peak timing.",
     )
+
+
+def recording_figures(wave, sampling_rate, history):
+    """Show the complete record, the forecast boundary and a sample-level zoom."""
+    time = np.arange(len(wave)) / sampling_rate
+    boundary = history / sampling_rate
+    overview, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, layout="constrained")
+    for i, ax in enumerate(axes.flat):
+        ax.plot(time, wave[:, i], lw=0.7)
+        ax.axvline(boundary, color="black", ls="--", lw=0.8)
+        ax.set(title=LEADS[i], ylabel="mV")
+        if i >= 9:
+            ax.set_xlabel("Time (s)")
+    overview.suptitle("All 12 leads; dashed line marks the end of the observed history")
+    detail, (long_ax, short_ax) = plt.subplots(1, 2, figsize=(12, 3), layout="constrained")
+    long_ax.plot(time, wave[:, 1], lw=0.8)
+    long_ax.axvline(boundary, color="black", ls="--")
+    short_ax.plot(time[:sampling_rate], wave[:sampling_rate, 1], ".-", lw=0.65, ms=3)
+    long_ax.set(title="Lead II, complete recording", xlabel="Time (s)", ylabel="mV")
+    short_ax.set(title="Lead II, first second (one dot per sample)", xlabel="Time (s)", ylabel="mV")
+    return overview, detail
+
+
+def qrs_index(wave, sampling_rate, start=0, stop=None):
+    """Return the first detected Lead II QRS whose plotting window fits."""
+    from wfdb.processing import xqrs_detect
+
+    stop = len(wave) if stop is None else stop
+    margin = round(0.2 * sampling_rate)
+    try:
+        peaks = xqrs_detect(wave[:, 1], fs=sampling_rate, verbose=False)
+    except (ValueError, IndexError, FloatingPointError):
+        return None
+    return next((int(i) for i in peaks if start + margin <= i < stop - margin), None)
+
+
+def preprocessing_figures(raw, filtered, sampling_rate):
+    """Compare the two observed histories without extending filtering into the target."""
+    time = np.arange(len(raw)) / sampling_rate
+    overview, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, layout="constrained")
+    for i, ax in enumerate(axes.flat):
+        ax.plot(time, raw[:, i], label="P0 raw", lw=0.7)
+        ax.plot(time, filtered[:, i], label="P1 causal", lw=0.7)
+        ax.set(title=LEADS[i], ylabel="mV")
+        if i >= 9:
+            ax.set_xlabel("Observed time (s)")
+    axes.flat[0].legend(fontsize=7)
+    detail, (qrs, psd) = plt.subplots(1, 2, figsize=(11, 3.4), layout="constrained")
+    index = qrs_index(raw, sampling_rate)
+    half = round(0.2 * sampling_rate)
+    zoom = slice(index - half, index + half + 1) if index is not None else slice(0, sampling_rate)
+    for values, label in ((raw, "P0 raw"), (filtered, "P1 causal")):
+        qrs.plot(time[zoom], values[zoom, 1], label=label)
+        freq, power = signal.welch(values[:, 1], fs=sampling_rate, nperseg=min(256, len(raw)))
+        psd.semilogy(freq, np.maximum(power, 1e-15), label=label)
+    qrs.set(
+        title="Lead II detected QRS" if index is not None else "Lead II: no QRS located",
+        xlabel="Observed time (s)",
+        ylabel="mV",
+    )
+    psd.set(title="Welch PSD, observed Lead II", xlabel="Frequency (Hz)", ylabel="mV²/Hz")
+    qrs.legend()
+    psd.legend()
+    return overview, detail
+
+
+def matched_forecasts(cfg, cache, labels):
+    """Plot the lowest common validation ECG ID for both selected checkpoints."""
+    from evaluate import outputs, verify_evaluation
+
+    series = {}
+    for label, name in labels.items():
+        folder = outputs(cfg, name)
+        verify_evaluation(folder, "val")
+        with np.load(folder / "val_predictions.npz") as archive:
+            series[label] = {key: archive[key] for key in ("ecg_id", "target", "prediction")}
+    ecg_id = min(set.intersection(*(set(run["ecg_id"]) for run in series.values())))
+    metadata = pd.read_csv(Path(cache) / "metadata_val.csv")
+    index = int(np.flatnonzero(metadata.ecg_id == ecg_id)[0])
+    truth = np.load(Path(cache) / "waves_val.npy", mmap_mode="r")[index]
+    h, hz = cfg["data"]["history"], cfg["data"]["sampling_rate"]
+    predicted = {}
+    for label, run in series.items():
+        row = int(np.flatnonzero(run["ecg_id"] == ecg_id)[0])
+        if not np.array_equal(truth[h:], run["target"][row]):
+            raise ValueError("The forecast plots must share one identical raw target.")
+        predicted[label] = run["prediction"][row]
+    fig, axes = plt.subplots(4, 3, figsize=(13, 9), sharex=True, layout="constrained")
+    time = np.arange(len(truth)) / hz
+    for i, ax in enumerate(axes.flat):
+        ax.plot(time[:h], truth[:h, i], lw=0.65, color="0.45", label="Observed")
+        ax.plot(time[h:], truth[h:, i], lw=0.95, color="black", label="True future")
+        for label, prediction in predicted.items():
+            ax.plot(time[h:], prediction[:, i], lw=0.8, label=label)
+        ax.axvline(h / hz, ls="--", color="black", lw=0.7)
+        ax.set(title=LEADS[i], ylabel="mV")
+        if i >= 9:
+            ax.set_xlabel("Time (s)")
+    axes.flat[0].legend(fontsize=7)
+    fig.suptitle(f"Validation ECG {ecg_id} – lowest common ECG ID")
+    peak = qrs_index(truth, hz, start=h)
+    zoom_fig = None
+    if peak is not None:
+        zoom_fig, ax = plt.subplots(figsize=(7, 3), layout="constrained")
+        local = slice(peak - round(0.2 * hz), peak + round(0.2 * hz) + 1)
+        ax.plot(time[local], truth[local, 1], color="black", label="True future")
+        for label, prediction in predicted.items():
+            pred_slice = slice(local.start - h, local.stop - h)
+            ax.plot(time[local], prediction[pred_slice, 1], label=label)
+        ax.set(
+            title=f"ECG {ecg_id}: first detected future QRS in Lead II",
+            xlabel="Time (s)",
+            ylabel="mV",
+        )
+        ax.legend()
+    return int(ecg_id), fig, zoom_fig
+
+
+def occlusion_heatmap(importance):
+    fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
+    extent = max(float(np.abs(importance.to_numpy()).max()), 1e-9)
+    heat = ax.imshow(importance, cmap="RdBu_r", vmin=-extent, vmax=extent, aspect="auto")
+    ax.set(
+        xticks=range(len(importance.columns)),
+        xticklabels=importance.columns,
+        yticks=range(len(importance.index)),
+        yticklabels=importance.index,
+        xlabel="Masked observed interval",
+        ylabel="Masked ECG lead",
+    )
+    fig.colorbar(heat, ax=ax, label="Occluded MAE − original MAE (mV)")
+    return fig

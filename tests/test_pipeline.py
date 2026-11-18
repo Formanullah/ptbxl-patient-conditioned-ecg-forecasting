@@ -311,28 +311,41 @@ def test_legacy_config_rejected():
         load_config("archive/legacy_2ad3e68/configs/pilot.yaml")
 
 
-def test_notebook_contains_implementation_without_project_imports():
+def test_week5_notebook_uses_shared_imports_and_full_configuration():
     import ast
 
     import nbformat
 
-    path = Path("notebooks/PTBXL_Full_Colab_GPU.ipynb")
+    path = Path("notebooks/Week5_ECG_Forecasting.ipynb")
     notebook = nbformat.read(path, as_version=4)
     nbformat.validate(notebook)
     source = "\n".join(c.source for c in notebook.cells if c.cell_type == "code")
-    project_modules = {p.stem for p in Path("src").glob("*.py")} | {"models"}
     for cell in notebook.cells:
         if cell.cell_type == "code":
             tree = ast.parse(cell.source)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom):
-                    assert node.level == 0 and node.module.split(".")[0] not in project_modules
-                elif isinstance(node, ast.Import):
-                    assert all(
-                        alias.name.split(".")[0] not in project_modules for alias in node.names
-                    )
-    assert "class LSTMForecaster" in source and "class CNNLSTMForecaster" in source
-    assert "def prepare(" in source and "def train_run(" in source
-    assert "requirements.txt" not in source and "configs/config.yaml" not in source
-    assert "RUN_MODE = 'pilot'" in source and "FINAL_TEST = False" in source
+            assert not any(isinstance(node, ast.ClassDef) for node in ast.walk(tree))
+    assert "from models import CNNLSTMForecaster, LSTMForecaster" in source
+    assert "def prepare(" not in source and "def train_run(" not in source
+    config_cell = next(cell for cell in notebook.cells if "CONFIG = {" in cell.source)
+    assignments = ast.parse(config_cell.source).body
+    config = next(
+        node.value
+        for node in assignments
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "CONFIG" for target in node.targets)
+    )
+    expected = {
+        "mode": "full",
+        "epochs": 120,
+        "smoke_test": False,
+        "run_training": True,
+        "run_all_experiments": True,
+        "final_test": False,
+    }
+    actual = {
+        key.value: ast.literal_eval(value)
+        for key, value in zip(config.keys, config.values, strict=True)
+        if isinstance(key, ast.Constant) and key.value in expected
+    }
+    assert actual == expected
     assert "records500" not in source

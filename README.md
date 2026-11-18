@@ -66,47 +66,45 @@ results, checkpoints, figures and manifests live under `results/<study_id>/`.
 
 ## Notebook: local or Colab
 
-Open `notebooks/PTBXL_Full_Colab_GPU.ipynb` in Colab, Jupyter or VS Code. The
-notebook includes its Python code, configuration and dependency list. It does
-not need a project ZIP, checkout, `src/` folder or external YAML file.
-All notebook directory settings are grouped under **Paths** in the first cell.
+Open [Week5_ECG_Forecasting.ipynb](notebooks/Week5_ECG_Forecasting.ipynb) in Jupyter,
+VS Code, or Colab. It demonstrates the complete workflow and imports shared
+implementations from `src/`. The earlier standalone notebook is preserved in
+[the notebook archive](archive/previous_notebooks/).
 
-In Colab, upload just the notebook, run the settings, and run **Check the
-dataset** before training. The default uses `My Drive/Colab Notebooks/PTB-XL`.
-The check displays a **Loaded** column, reads the metadata, and checks that one
-training record's waveform files are readable. Change `DRIVE_DATA_ROOT` for a
-different Drive folder, or set `DATA_SOURCE='physionet'` to download the official
-100 Hz dataset instead. Set `SAVE_TO_DRIVE=True` for results that persist after
-a runtime reset. Otherwise download `PTBXL_Research_Results.zip` from the Colab
-Files pane before disconnecting.
+- **Local:** use your project Python kernel, open the notebook from this
+  repository, then set `CONFIG['data_root']` if PTB-XL is stored elsewhere.
+- **Colab:** put this project on Drive or clone it into the runtime. Set
+  `CONFIG['project_root']` to the folder containing `src/`, `configs/`, and
+  `requirements.txt`. Set the data folder separately; for Drive it defaults to
+  `My Drive/Colab Notebooks/PTB-XL`. With `data_source='physionet'`, use a runtime
+  directory for `data_root`; only selected train/validation waveform pairs are
+  downloaded before training. Keep `results_dir` on Drive for long runs.
 
-Locally, select a kernel with the dependencies installed or set
-`INSTALL_DEPENDENCIES=True`. Point `LOCAL_DATA_ROOT` at the extracted PTB-XL
-folder or choose `DATA_SOURCE='physionet'`. Local results go under
-`results/<study_id>/` by default.
-
-Both environments start in pilot mode. Set patient counts in the first cell
-and use a new `STUDY_ID` when changing the cohort. Section 4 displays ECG and
-patient counts, including reserved test metadata. Full mode uses the official
-full cohorts and requires CUDA unless explicitly enabled on CPU.
-
-The standalone notebook saves the source of its implementation cells with the
-run. Its checkpoints use notebook provenance and are separate from CLI runs.
+The first cell configures the run. It is set to train E1–E4 for 120 epochs
+each on all training and validation patients, with results under
+`results/week5_full/full/` locally. Select a CUDA kernel or a Colab GPU for this
+configuration. For a two-epoch pilot, set `mode='pilot'` and `smoke_test=True`.
+Set `run_training=False` to inspect saved evidence, or set
+`run_all_experiments=False` and choose one `experiment_id` to train a single
+condition. Use a new `study_id` when the cohort or settings change. Compatible
+finished runs are reused. After all four full-data runs finish, set
+`final_test=True` to evaluate fold 10.
 
 ## Results and verification
 
-The [CPU pilot report](docs/RESULTS.md) covers six two-epoch runs on 339 training
-and 81 validation ECGs. Fold 10 remained unopened. All 26 acceptance tests
-passed. Synthetic checks also exercised screening, tuning, both feature-selection
-methods, and final-test locking. A checksum-verified official download and WFDB
-decode were tested for one 100-Hz record.
+The [Week 5 results](docs/WEEK5_RESULTS.md) summarize the matched real-data CPU
+validation runs and their limitations. The earlier
+[CPU pilot report](docs/RESULTS.md) describes the previous protocol and remains
+separate. Use `python tools/validate_notebook.py --work <scratch-folder>` to
+execute the Week 5 notebook end to end on a synthetic software fixture, including
+the guarded final-test path. Fixture metrics are not PTB-XL evidence.
 
-Real-data screening, tuning, feature selection, the four 120-epoch GPU runs, and
-locked final scoring are pending. Pilot and synthetic scores do not rank the
-research conditions.
+The 120-epoch full-data GPU runs and real fold-10 scoring are pending.
+The short CPU pilot measures only the stated cohort and epoch count.
 
-The CLI is `src/pipeline.py`. The notebook includes the same study logic in its
-own cells so it can run independently.
+The Week 4 CLI entry point is `src/pipeline.py`. mRMR and grouped permutation
+importance remain an earlier, separate extension; they are not part of the
+Week 5 notebook. Old checkpoints retain their saved source provenance.
 See [methodology](docs/METHODOLOGY.md), [equations](docs/EQUATIONS.md), and the
 [data dictionary](docs/DATA_DICTIONARY.md). The [historical archive](archive/legacy_2ad3e68/README_ARCHIVE.md)
 explains earlier protocols and which old reports lack supporting artifacts.

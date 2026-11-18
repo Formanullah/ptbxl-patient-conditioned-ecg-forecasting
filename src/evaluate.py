@@ -138,7 +138,8 @@ def verify_evaluation(out, split):
     return receipt
 
 
-def evaluate_run(cfg, cache, run, split="val", checkpoint="best.pt", label=None):
+def evaluation_model(cfg, cache, run, split="val", checkpoint="best.pt"):
+    """Restore a matching model and its exact evaluator inputs, without scoring."""
     if split not in ("val", "test"):
         raise ValueError("Evaluation split must be val or test")
     run = Path(run)
@@ -183,7 +184,15 @@ def evaluate_run(cfg, cache, run, split="val", checkpoint="best.pt", label=None)
     if state["schema"] != SCHEMA or state["signature"] != record["signature"]:
         raise ValueError("Checkpoint signature mismatch")
     model.load_state_dict(state["model"])
-    prediction, target = predict(model, loader(dataset, cfg), device)
+    return model, dataset, device, scaler, state, record
+
+
+def evaluate_run(cfg, cache, run, split="val", checkpoint="best.pt", label=None):
+    run = Path(run)
+    model, dataset, device, scaler, state, record = evaluation_model(
+        cfg, cache, run, split, checkpoint
+    )
+    prediction, _ = predict(model, loader(dataset, cfg), device)
     prediction = inverse_scale(prediction, scaler)
     # Use the stored physical truth directly, avoiding normalization round-off in ground truth.
     target = np.asarray(dataset.waves[:, cfg["data"]["history"] :])

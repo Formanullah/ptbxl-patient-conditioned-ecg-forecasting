@@ -20,7 +20,17 @@ from visualize import diagnostic_figures, run_figures
 
 
 def condition(
-    cfg, cache, model, filtering, features, *, resume=False, lr=None, hidden=None, selection=None
+    cfg,
+    cache,
+    model,
+    filtering,
+    features,
+    *,
+    resume=False,
+    lr=None,
+    hidden=None,
+    selection=None,
+    name=None,
 ):
     budget = (
         cfg["training"]["pilot_epochs"]
@@ -32,7 +42,7 @@ def condition(
         )
     )
     rate, size = lr or cfg["training"]["lr"], hidden or cfg["model"]["hidden"]
-    name = f"{model}_{filtering}_{features}_lr{rate:g}_h{size}_e{budget}"
+    name = name or f"{model}_{filtering}_{features}_lr{rate:g}_h{size}_e{budget}"
     run = study_dir(cfg) / cfg["run_mode"] / "checkpoints" / name
     complete = (run / "status.json").exists() and read_json(run / "status.json")[
         "state"
