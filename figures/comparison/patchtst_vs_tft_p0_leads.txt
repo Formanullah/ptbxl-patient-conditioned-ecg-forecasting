@@ -1,0 +1,5 @@
+
+Figure 10.
+Lead-wise MAE comparison between PatchTST and TFT when trained
+on raw ECG signals. Lower bars indicate better forecasting
+performance for a specific ECG lead.

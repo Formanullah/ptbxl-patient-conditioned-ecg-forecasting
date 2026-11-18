@@ -1,0 +1,5 @@
+
+Figure 9.
+Lead-wise MAE for TFT trained on raw (P0) and preprocessed (P1)
+ECG signals. Differences between leads indicate how preprocessing
+affects individual ECG channels.

@@ -1,0 +1,6 @@
+
+Figure 1.
+Training and validation patient-macro MAE for PatchTST trained on
+raw ECG waveforms (P0). The model converges rapidly during the
+initial epochs and gradually stabilizes near the optimal validation
+MAE obtained during training.

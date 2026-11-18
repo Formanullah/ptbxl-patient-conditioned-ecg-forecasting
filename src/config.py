@@ -7,6 +7,19 @@ from pathlib import Path
 
 import yaml
 
+import torch
+
+def device_for(cfg):
+    """Determine the PyTorch device based on configuration."""
+    dev = cfg.get("training", {}).get("device", "auto")
+    if dev == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(dev)
+
+def study_dir(cfg):
+    """Return the output directory for the current study."""
+    return Path(cfg["paths"]["results"]) / cfg["study_id"]
+
 LEADS = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 CLASSES = ["NORM", "MI", "STTC", "CD", "HYP"]
 FEATURES = (
@@ -66,20 +79,23 @@ def load_config(path, experiment=None):
             if value <= 0 or abs(value - round(value)) > 1e-6:
                 raise ValueError(f"{seconds} must be positive and resolve to whole samples")
             d[samples] = int(round(value))
-        d.setdefault("start", 0)
-        d.setdefault("layout", "time_first")
         cfg.setdefault("preprocessing", {"filter": "none", "scaling": "zscore", "order": 4})
         cfg.setdefault("features", {})
+    
+    d.setdefault("start", 0)
+    d.setdefault("layout", "time_first")
+    
     if d["sampling_rate"] not in (100, 500):
         raise ValueError("sampling_rate must be 100 or 500")
     if min(d["history"], d["horizon"]) <= 0 or d["start"] < 0:
         raise ValueError("Invalid input/target geometry")
     if d["start"] + d["history"] + d["horizon"] > 10 * d["sampling_rate"]:
         raise ValueError("Window exceeds the ten-second record")
-    if min(tr["epochs"], tr["patience"], tr["batch_size"], tr["threads"]) < 1:
+    if min(tr["epochs"], tr["batch_size"], tr["threads"]) < 1:
         raise ValueError("Training counts must be positive")
-    if tr["lr"] <= 0 or cfg["contrastive"]["temperature"] <= 0:
-        raise ValueError("Learning rate and temperature must be positive")
+    if tr["lr"] <= 0:
+        raise ValueError("Learning rate must be positive")
+
     if "storage" in cfg:
         resolve_storage(cfg)
     return cfg
@@ -186,3 +202,21 @@ def run_directory(cfg, architecture, variant):
     return Path(cfg["paths"]["experiments"]) / cfg.get("experiment", {}).get(
         "name", f"{architecture}_{variant}"
     )
+    
+COHORT_LIMITS = {
+    "pilot": {"train": 300, "val": 75},
+    "medium": {"train": 1500, "val": None},
+    "full": {"train": None, "val": None},
+}
+
+def cohort_limits(cfg):
+    mode = cfg["run_mode"]
+    if mode not in COHORT_LIMITS:
+        raise ValueError(f"Unknown run mode: {mode}")
+    return COHORT_LIMITS[mode]
+
+
+def source_hashes():
+    """Return SHA256 hashes of source python files."""
+    source_root = Path(__file__).parent
+    return {p.name: file_hash(p) for p in source_root.glob("*.py")}

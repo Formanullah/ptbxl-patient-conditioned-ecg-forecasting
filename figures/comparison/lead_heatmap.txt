@@ -1,0 +1,4 @@
+
+Figure 12.
+Heatmap of lead-wise MAE for all transformer experiments.
+Darker colors indicate lower forecasting error.
