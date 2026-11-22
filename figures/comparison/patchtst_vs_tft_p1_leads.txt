@@ -1,0 +1,4 @@
+
+Figure 11.
+Lead-wise MAE comparison between PatchTST and TFT using
+preprocessed ECG signals (P1).

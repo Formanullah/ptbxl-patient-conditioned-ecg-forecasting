@@ -1,0 +1,5 @@
+
+Figure 4.
+Validation patient-macro MAE for PatchTST P0. The selected
+checkpoint occurs at epoch 92, where
+the lowest validation error was achieved.

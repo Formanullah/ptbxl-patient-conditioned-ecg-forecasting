@@ -1,0 +1,62 @@
+# Optional named comparisons. Inherits the dataset and optimizer from training.yaml.
+# Run only the experiment you choose: --config configs/experiments.yaml --experiment NAME
+extends: training.yaml
+experiment: {architecture: lstm, variant: patient_history}
+experiments:
+  lstm_ecg_only:
+    experiment: {variant: ecg_only}
+  lstm_demographics:
+    experiment: {variant: demographics}
+  lstm_patient_history: {}
+  lstm_patient_history_contrastive:
+    experiment: {variant: patient_history_contrastive}
+  cnn_lstm_ecg_only:
+    experiment: {architecture: cnn_lstm, variant: ecg_only}
+  cnn_lstm_demographics:
+    experiment: {architecture: cnn_lstm, variant: demographics}
+  cnn_lstm_patient_history:
+    experiment: {architecture: cnn_lstm}
+  cnn_lstm_patient_history_contrastive:
+    experiment: {architecture: cnn_lstm, variant: patient_history_contrastive}
+  lstm_early:
+    model: {fusion: early}
+  cnn_lstm_early:
+    experiment: {architecture: cnn_lstm}
+    model: {fusion: early}
+  lstm_expanded:
+    experiment: {variant: expanded}
+  lstm_mrmr:
+    experiment: {variant: mrmr}
+  lstm_permutation:
+    experiment: {variant: permutation}
+  lstm_zscore:
+    preprocessing: {scaling: zscore}
+  lstm_highpass:
+    preprocessing: {filter: highpass}
+  lstm_bandpass:
+    preprocessing: {filter: bandpass}
+  lstm_hidden_64:
+    model: {hidden: 64}
+  lstm_lr_0001:
+    training: {lr: 0.0001}
+  cnn_lstm_lr_0001:
+    experiment: {architecture: cnn_lstm}
+    training: {lr: 0.0001}
+  cnn_lstm_morphology:
+    experiment: {architecture: cnn_lstm}
+    training: {derivative_weight: 0.1}
+  # Data-size control: same 600 validation patients and candidate model/settings.
+  cnn_lstm_1500_patients:
+    experiment: {architecture: cnn_lstm}
+    subset:
+      patients: {train: 1500, val: 600, test: 100}
+  # Previous model/training recipe on the expanded cohort, to measure the effect
+  # of the combined parameter changes separately from increasing patient counts.
+  cnn_lstm_previous_settings:
+    experiment: {architecture: cnn_lstm}
+    model: {hidden: 64, depth: 1, head_width: 256}
+    training:
+      lr: 0.001
+      weight_decay: 0.0001
+      early_stopping: false
+      scheduler: none

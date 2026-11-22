@@ -1,0 +1,4 @@
+
+Figure 2.
+Validation RMSE obtained by PatchTST on raw ECG signals (P0)
+throughout training.

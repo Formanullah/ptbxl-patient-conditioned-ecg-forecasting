@@ -1,0 +1,5 @@
+
+Figure 3.
+Training and validation RMSE curves for PatchTST trained on
+raw ECG waveforms. The similarity of both curves indicates
+stable generalization.
