@@ -2,6 +2,7 @@
 
 from .cnn import CNNForecaster
 from .cnn_lstm import CNNLSTMForecaster
+from .gated_baseline import GatedBaselineCNNLSTM  # noqa: F401  (needs BaselineConditioned inputs)
 from .lstm import LSTMForecaster
 from .patchtst import PatchTSTForecaster
 from .transformer import TransformerForecaster

@@ -34,13 +34,17 @@ def train_forecaster(
     batch_size: int = 64,
     threads: int = 4,
     reinit: bool = True,
+    loss=None,
 ) -> dict:
-    """Train with L1 loss in the pipeline's target space. Returns the training record and
+    """Train in the pipeline's target space with ``loss`` (default L1; see ``losses``).
+    Early stopping uses the same loss on the holdout. Returns the training record and
     leaves ``model`` holding the weights of the best holdout epoch.
 
     With ``reinit`` (default) every layer is re-initialised after seeding, so the initial
     weights depend only on ``seed`` and not on the RNG state when the model was built.
     Pass ``reinit=False`` to fine-tune existing weights."""
+    l1 = torch.nn.functional.l1_loss
+    loss = loss or l1
     seed_everything(seed)
     if reinit:
         for m in model.modules():
@@ -69,16 +73,22 @@ def train_forecaster(
             inp = torch.from_numpy(pipeline.inputs(x).astype(np.float32))
             tgt = torch.from_numpy(pipeline.targets(y, x).astype(np.float32))
             opt.zero_grad()
-            loss = torch.nn.functional.l1_loss(model(inp), tgt)
-            loss.backward()
+            batch_loss = loss(model(inp), tgt)
+            batch_loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
-            losses.append(loss.item())
+            losses.append(batch_loss.item())
         model.eval()
         with torch.no_grad():
-            val = float(np.mean([torch.nn.functional.l1_loss(model(hold_in[s : s + 512]), hold_out[s : s + 512]).item()
-                                 for s in range(0, len(hold_in), 512)]))  # fmt: skip
-        log.append({"epoch": epoch, "train_l1": float(np.mean(losses)), "holdout_l1": val})
+            parts = [
+                (model(hold_in[s : s + 512]), hold_out[s : s + 512])
+                for s in range(0, len(hold_in), 512)
+            ]
+            val_l1 = float(np.mean([l1(p, t).item() for p, t in parts]))
+            val = val_l1 if loss is l1 else float(np.mean([loss(p, t).item() for p, t in parts]))
+        # Default L1: train_l1/holdout_l1 are the objective, as in Phases 5-9.
+        log.append({"epoch": epoch, "train_l1": float(np.mean(losses)), "holdout_l1": val_l1,
+                    "holdout_loss": val})  # fmt: skip
         if val < best - 1e-6:
             best, best_state, bad = val, copy.deepcopy(model.state_dict()), 0
         else:
@@ -86,8 +96,9 @@ def train_forecaster(
             if bad >= patience:
                 break
     model.load_state_dict(best_state)
-    return {"log": log, "best_holdout_l1": best, "best_epoch": int(np.argmin([r["holdout_l1"] for r in log]) + 1),
-            "epochs_run": len(log), "seconds": time.perf_counter() - t0}  # fmt: skip
+    best_epoch = int(np.argmin([r["holdout_loss"] for r in log]) + 1)
+    return {"log": log, "best_holdout_l1": log[best_epoch - 1]["holdout_l1"], "best_holdout_loss": best,
+            "best_epoch": best_epoch, "epochs_run": len(log), "seconds": time.perf_counter() - t0}  # fmt: skip
 
 
 def predict(

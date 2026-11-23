@@ -218,3 +218,51 @@ class Pipeline:
     @property
     def out_leads(self) -> int:
         return 8 if self.leads8 else 12
+
+
+def pack_baseline(records: np.ndarray, baseline: np.ndarray, history: int) -> np.ndarray:
+    """Append a baseline forecast (n, horizon, 12), computed from the history only, as 12
+    extra channels stored in the *last* ``horizon`` steps of the history window. Training
+    code slices ``[:history]`` as input, so the forecast travels with the history."""
+    n, _, leads = records.shape
+    f = baseline.shape[1]
+    extra = np.zeros((n, records.shape[1], leads), dtype=records.dtype)
+    extra[:, history - f : history] = baseline
+    return np.concatenate([records, extra], axis=2)
+
+
+class BaselineConditioned:
+    """Pipeline for models that also receive a causal baseline forecast (``pack_baseline``).
+
+    Wraps a raw-target 12-lead ``Pipeline``: model inputs are the wrapped pipeline's
+    history channels followed by the 12 packed baseline channels. Targets and outputs
+    ignore the packed channels.
+    """
+
+    def __init__(self, base: Pipeline):
+        if base.scaler_name != "none" or base.leads8:
+            raise ValueError("the baseline is mixed in raw mV: needs scaler 'none' and 12 leads")
+        self.base = base
+
+    def fit(self, x_raw: np.ndarray, ids) -> BaselineConditioned:
+        self.base.fit(x_raw[..., :12], ids)
+        self.fit_ids = self.base.fit_ids
+        return self
+
+    def inputs(self, x_raw: np.ndarray) -> np.ndarray:
+        return np.concatenate([self.base.inputs(x_raw[..., :12]), x_raw[..., 12:]], axis=2)
+
+    def targets(self, y_raw: np.ndarray, x_raw: np.ndarray) -> np.ndarray:
+        return self.base.targets(y_raw[..., :12], x_raw[..., :12])
+
+    def outputs(self, pred: np.ndarray, x_raw: np.ndarray) -> np.ndarray:
+        return self.base.outputs(pred, x_raw[..., :12])
+
+    @property
+    def in_channels(self) -> int:
+        """History channels only; the model adds ``out_leads`` baseline channels."""
+        return self.base.in_channels
+
+    @property
+    def out_leads(self) -> int:
+        return 12

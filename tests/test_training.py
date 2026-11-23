@@ -63,3 +63,52 @@ def test_initial_weights_depend_only_on_seed(name):
         train_forecaster(model, pipe, rec[:32], rec[32:], 700, 290, seed=0, epochs=1, threads=1)
         weights.append(torch.cat([p.detach().flatten() for p in model.parameters()]))
     assert torch.equal(weights[0], weights[1])
+
+
+def test_default_loss_is_bitwise_l1():
+    rng = np.random.default_rng(0)
+    rec = rng.normal(0, 0.1, (40, 990, 12)).astype(np.float32)
+    pipe = Pipeline("decompose_0.67").fit(rec[:32, :700], ids=range(32))
+    weights = []
+    for loss in (None, torch.nn.functional.l1_loss):
+        model = MODELS["cnn_lstm"](in_channels=24, horizon=290, **SMALL["cnn_lstm"])
+        train_forecaster(model, pipe, rec[:32], rec[32:], 700, 290, seed=0, epochs=2, threads=1,
+                         loss=loss)  # fmt: skip
+        weights.append(torch.cat([p.detach().flatten() for p in model.parameters()]))
+    assert torch.equal(weights[0], weights[1])
+
+
+@pytest.mark.parametrize("name", ["derivative", "spectral"])
+def test_objectives_are_zero_at_truth_and_penalise_blur(name):
+    from ptbxl_forecast.losses import aux_scale, make_objective
+
+    t = torch.arange(290, dtype=torch.float32) / 100
+    y = (torch.sin(2 * torch.pi * 1.2 * t) ** 31)[None, :, None].repeat(2, 1, 12)  # spiky beats
+    blur = torch.nn.functional.avg_pool1d(y.transpose(1, 2), 9, 1, 4).transpose(1, 2)
+    hist = np.zeros((2, 700, 12))
+    scale = aux_scale(name, y.numpy(), hist)
+    obj, l1 = make_objective(name, 1.0, scale), make_objective("l1")
+    assert scale > 0 and obj(y, y).item() == pytest.approx(0, abs=1e-6)
+    pred = blur.clone().requires_grad_(True)
+    loss = obj(pred, y)
+    loss.backward()
+    assert loss.item() > l1(blur, y).item() and torch.isfinite(pred.grad).all()
+
+
+def test_gated_baseline_model_uses_packed_causal_baseline():
+    from ptbxl_forecast.models import GatedBaselineCNNLSTM
+    from ptbxl_forecast.preprocessing import BaselineConditioned, pack_baseline
+
+    rng = np.random.default_rng(0)
+    rec = rng.normal(0, 0.1, (8, 990, 12))
+    base = rng.normal(0, 0.1, (8, 290, 12))
+    packed = pack_baseline(rec, base, 700)
+    pipe = BaselineConditioned(Pipeline("decompose_0.67")).fit(packed[:, :700], ids=range(8))
+    model = GatedBaselineCNNLSTM(pipe.in_channels, horizon=290, **SMALL["cnn_lstm"])
+    assert pipe.targets(packed[:, 700:], packed[:, :700]).shape == (8, 290, 12)
+    with torch.no_grad():  # open gate, no correction -> the baseline itself
+        model.gate.weight.zero_(), model.gate.bias.fill_(50.0)
+        model.body.head.weight.zero_(), model.body.head.bias.zero_()
+    assert np.allclose(predict(model, pipe, packed[:, :700]), base, atol=1e-6)
+    with pytest.raises(ValueError):
+        BaselineConditioned(Pipeline("decompose_0.67", leads8=True))
