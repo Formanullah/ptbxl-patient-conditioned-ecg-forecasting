@@ -1,0 +1,11 @@
+method,source,subset_first_run_s,verified_of_1974,rerun_s,skips_existing,resumes_after_interrupt,verifies_sha256,preinstalled_on,extra_install,full_100hz_estimate
+python_script_keepalive_32thr (selected),S3 (physionet.org fallback),1.9-3.8,1974,0.4,yes (hash-checked),yes (hard kill tested),yes,none (needs Python 3.9+ or uv),none,23 s measured (43602 files)
+python_script_urllib_32thr (before fix),S3,15.4,1974,0.4,yes,yes,yes,none,none,8.9 min measured
+python_script_urllib_32thr (before fix),physionet.org,142.3,1974,0.4,yes,yes,yes,none,none,~52 min (extrapolated)
+curl_parallel_32,S3,0.9,1974,0.9 (re-downloads all),no,yes (-C -; tested),no,Linux macOS Windows10+,none,~20 s (extrapolated)
+aws_cli_v1_s3_sync,S3,7.1,1974,2.4,yes (size/time),yes,no,none,pip/uv tool 52 s; AWS_CA_BUNDLE behind TLS proxy,~2.6 min (extrapolated)
+wget_url_list_N,S3,4.6,1974,4.3,yes (timestamp),yes,no,Linux,brew/winget on macOS/Windows,~1.7 min (extrapolated)
+wget_recursive (PhysioNet's documented command),physionet.org,capped 300 s,334 in 300 s,n/a,yes,yes,no,Linux,brew/winget on macOS/Windows,~10.9 h (1.11 files/s)
+powershell7_parallel_32,S3,45.1,1974,10.3 (existence only),existence only,untested (existence check only),no,none (Windows ships 5.1),PowerShell 7,~17 min (extrapolated)
+powershell_sequential,S3,capped 300 s,1321 in 300 s,n/a,no,no,no,Windows,none,~2.8 h (4.4 files/s)
+zip_archive (= browser download),physionet.org -> S3 redirect,35.1 download + 9.0 unzip,43598 of records100 after unzip,n/a,n/a,yes via HTTP range (curl -C -),no (verify afterwards),any browser,unzip (built in on all three OS),44 s measured (1.84 GB incl. 1.3 GB unused 500 Hz)

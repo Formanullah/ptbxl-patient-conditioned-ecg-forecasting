@@ -1,15 +1,23 @@
 name: lint-and-test
-on: workflow_dispatch
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install -r requirements.txt
-      - run: ruff check src tests
-      - run: ruff format --check src tests
-      - run: python src/run_tests.py -q
+      - uses: astral-sh/setup-uv@v6
+      - name: Install locked environment (CPU torch, MLflow)
+        run: uv sync --locked --extra cpu --extra tracking
+      - run: uv run --locked ruff check src tests research scripts
+      - run: uv run --locked ruff format --check src tests research scripts
+      - run: uv run --locked pytest -q
+      - run: uv run --locked ptbxl-forecast config

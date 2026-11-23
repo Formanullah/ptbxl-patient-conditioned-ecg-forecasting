@@ -1,0 +1,103 @@
+{
+  "package_rules_reproduce_phase3_list": true,
+  "excluded_records": 30,
+  "excluded_by_rule": {
+    "dropout": 4,
+    "plateau": 8,
+    "lead_relation": 18
+  },
+  "signals_shape_after_cleaning": [
+    19571,
+    990,
+    12
+  ],
+  "patients_lost_entirely": 20,
+  "counts": {
+    "1": {
+      "records_before": 2175,
+      "patients_before": 1878,
+      "records_after": 2169,
+      "patients_after": 1876
+    },
+    "2": {
+      "records_before": 2181,
+      "patients_before": 1849,
+      "records_after": 2174,
+      "patients_after": 1845
+    },
+    "3": {
+      "records_before": 2192,
+      "patients_before": 1887,
+      "records_after": 2188,
+      "patients_after": 1885
+    },
+    "4": {
+      "records_before": 2174,
+      "patients_before": 1883,
+      "records_after": 2171,
+      "patients_after": 1880
+    },
+    "5": {
+      "records_before": 2174,
+      "patients_before": 1890,
+      "records_after": 2174,
+      "patients_after": 1890
+    },
+    "6": {
+      "records_before": 2173,
+      "patients_before": 1884,
+      "records_after": 2171,
+      "patients_after": 1882
+    },
+    "7": {
+      "records_before": 2176,
+      "patients_before": 1871,
+      "records_after": 2174,
+      "patients_after": 1869
+    },
+    "8": {
+      "records_before": 2173,
+      "patients_before": 1881,
+      "records_after": 2171,
+      "patients_after": 1880
+    },
+    "9": {
+      "records_before": 2183,
+      "patients_before": 1942,
+      "records_after": 2179,
+      "patients_after": 1938
+    },
+    "total": {
+      "records_before": 19601,
+      "patients_before": 16965,
+      "records_after": 19571,
+      "patients_after": 16945
+    }
+  },
+  "trimming_impact_phase0_baselines_mV": {
+    "median": {
+      "mae_300_unmodified": 0.11033719033002853,
+      "mae_290_trimmed": 0.10942747443914413,
+      "mae_last_10_samples": 0.13671891391277313,
+      "last10_over_first290": 1.2494020462036133
+    },
+    "mean": {
+      "mae_300_unmodified": 0.11507878452539444,
+      "mae_290_trimmed": 0.11427375674247742,
+      "mae_last_10_samples": 0.13842497766017914,
+      "last10_over_first290": 1.2113453149795532
+    },
+    "sn4": {
+      "mae_300_unmodified": 0.11716682463884354,
+      "mae_290_trimmed": 0.11595963686704636,
+      "mae_last_10_samples": 0.1521752029657364,
+      "last10_over_first290": 1.3123117685317993
+    },
+    "oracle": {
+      "mae_300_unmodified": 0.07293392717838287,
+      "mae_290_trimmed": 0.07141836732625961,
+      "mae_last_10_samples": 0.11688519269227982,
+      "last10_over_first290": 1.6366264820098877
+    }
+  }
+}

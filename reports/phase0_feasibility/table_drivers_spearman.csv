@@ -1,0 +1,13 @@
+,spearman_rho
+rr_cv_hist,-0.386
+rr_shift,-0.467
+period_error,-0.563
+acf_peak,0.434
+hr_bpm,0.020
+spectral_entropy,-0.300
+perm_entropy,-0.018
+sample_entropy_II,0.063
+baseline_power_frac,-0.104
+hf_power_frac,-0.024
+signal_std,0.032
+age,0.134

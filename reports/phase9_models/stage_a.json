@@ -1,0 +1,11 @@
+{
+  "lr": {
+    "cnn": 0.0003,
+    "cnn_lstm": 0.001,
+    "lstm": 0.001,
+    "patchtst": 0.0003,
+    "transformer": 0.0003
+  },
+  "cnn_reuse_verified_bitwise": true,
+  "minutes": 148.71504208313223
+}

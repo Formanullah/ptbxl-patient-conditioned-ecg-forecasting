@@ -1,0 +1,7 @@
+strategy,mae_k1,mae_k1_sd,mae_k5,same_patient_top1,val_records_with_patient_in_train,balance_max_abs_smd,runs
+GKF patient 5-fold,0.14345,0.00068,0.12201,0.00000,0.00000,0.04044,5
+KF record 5-fold,0.14283,0.00104,0.12145,0.01158,0.19955,0.03508,5
+OF official folds,0.14952,,0.12825,0.00000,0.00000,0.88749,1
+P patient holdout,0.14279,0.00018,0.12154,0.00000,0.00000,0.04080,3
+R random record,0.14181,0.00059,0.12065,0.01033,0.20130,0.03162,3
+SR stratified record,0.14303,0.00078,0.12161,0.01229,0.20090,0.02728,3

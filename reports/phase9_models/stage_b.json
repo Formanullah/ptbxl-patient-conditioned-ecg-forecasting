@@ -1,0 +1,13 @@
+{
+  "minutes": 213.2623703463818,
+  "shortlist": [
+    "cnn_lstm",
+    "transformer"
+  ],
+  "best_family_fold9": "cnn_lstm",
+  "H9_1_any_beats_sn4": false,
+  "H9_1_min_ens_timing_ms": 251.61411847633792,
+  "H9_2_best_vs_cnn_rel": -0.05269955289756523,
+  "H9_1_pass": true,
+  "H9_2_pass": false
+}

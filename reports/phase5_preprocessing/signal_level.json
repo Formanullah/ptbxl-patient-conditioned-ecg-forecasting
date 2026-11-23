@@ -1,0 +1,75 @@
+{
+  "records": 500,
+  "results": {
+    "none": {
+      "displacement_mV": 0.0,
+      "max_slope_mV_per_s": 0.0,
+      "pass_S1": true,
+      "rmse_vs_clean_mV": 0.2523748916594185,
+      "template_corr_median": 0.916976968856303,
+      "st_error_median_mV": 0.04947139434068559,
+      "ms_per_record": 2.823770046234131e-06,
+      "pass_S2": false
+    },
+    "causal_hp_0.5": {
+      "displacement_mV": 1.1714850817693172,
+      "max_slope_mV_per_s": 2.4688825680191884,
+      "pass_S1": false,
+      "rmse_vs_clean_mV": 0.09849297486238354,
+      "template_corr_median": 0.9409866220033016,
+      "st_error_median_mV": 0.06724766473395534,
+      "ms_per_record": 0.10154877975583076,
+      "pass_S2": false
+    },
+    "causal_bp_0.5_40": {
+      "displacement_mV": 1.7109421408603236,
+      "max_slope_mV_per_s": 2.5391423858034776,
+      "pass_S1": false,
+      "rmse_vs_clean_mV": 0.10129703026601129,
+      "template_corr_median": 0.9268420240327588,
+      "st_error_median_mV": 0.06970955047914246,
+      "ms_per_record": 0.101399767678231,
+      "pass_S2": false
+    },
+    "zero_phase_bp_0.5_40_history": {
+      "displacement_mV": 0.5734950908118647,
+      "max_slope_mV_per_s": 0.47223755488284114,
+      "pass_S1": false,
+      "rmse_vs_clean_mV": 0.05737962686255452,
+      "template_corr_median": 0.9801063455879468,
+      "st_error_median_mV": 0.024274542785185992,
+      "ms_per_record": 0.21004536002874374,
+      "pass_S2": false
+    },
+    "causal_fir_lp_40": {
+      "displacement_mV": 0.0,
+      "max_slope_mV_per_s": 0.0,
+      "pass_S1": true,
+      "rmse_vs_clean_mV": 0.34578767724385334,
+      "template_corr_median": -0.05090565842569675,
+      "st_error_median_mV": 0.0713328628244839,
+      "ms_per_record": 0.26612892374396324,
+      "pass_S2": false
+    },
+    "wavelet_db4": {
+      "displacement_mV": 6.661338147750939e-16,
+      "max_slope_mV_per_s": 1.4665925062629633e-15,
+      "pass_S1": true,
+      "rmse_vs_clean_mV": 0.25842524802455824,
+      "template_corr_median": 0.7671716627140361,
+      "st_error_median_mV": 0.052180379517261524,
+      "ms_per_record": 1.6281639677472413,
+      "pass_S2": false
+    },
+    "median_baseline": {
+      "displacement_mV": 0.0,
+      "max_slope_mV_per_s": 0.0,
+      "pass_S1": true,
+      "rmse_vs_clean_mV": 0.06048972822018117,
+      "template_corr_median": 0.964219431381071,
+      "st_error_median_mV": 0.0377464531330643,
+      "ms_per_record": 10.522897245828062,
+      "pass_S2": false
+    }
+  }
+}

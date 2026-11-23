@@ -1,0 +1,5 @@
+dev,records,share_folds1_8,share_fold9,power_below_0.5Hz_median,mean_lead_sd_median,baseline_drift_flag,static_noise_flag,mae_median_forecast,sn4_skill_vs_mean,oracle_skill_vs_mean
+AT-6,6942,0.3503,0.3848,0.0378,0.1858,0.0622,0.0330,0.1306,-0.0263,0.2438
+AT-60,792,0.0350,0.0834,0.0039,0.1492,0.0303,0.2298,0.0798,0.0535,0.5899
+CS-12,5786,0.2691,0.5030,0.0207,0.1650,0.1371,0.1884,0.1098,-0.0445,0.3198
+CS100,6081,0.3455,0.0289,0.0041,0.1676,0.0186,0.2373,0.0920,0.0174,0.5854

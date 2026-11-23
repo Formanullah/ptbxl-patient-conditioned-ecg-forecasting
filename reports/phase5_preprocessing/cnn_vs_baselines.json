@@ -1,0 +1,54 @@
+{
+  "median (flat)": {
+    "mae": {
+      "diff": -0.02011,
+      "lo": -0.02246,
+      "hi": -0.01727
+    },
+    "dtw_mae": {
+      "diff": -0.02621,
+      "lo": -0.0286,
+      "hi": -0.02336
+    },
+    "template_mae": {
+      "diff": 1e-05,
+      "lo": -0.00014,
+      "hi": 0.00016
+    },
+    "beat_timing_ms": {
+      "diff": -39.35238,
+      "lo": -41.93417,
+      "hi": -36.69485
+    },
+    "beats_baseline": true
+  },
+  "sn4 (repeat cycles)": {
+    "mae": {
+      "diff": -0.02655,
+      "lo": -0.02925,
+      "hi": -0.02326
+    },
+    "dtw_mae": {
+      "diff": 0.00946,
+      "lo": 0.00663,
+      "hi": 0.01285
+    },
+    "template_mae": {
+      "diff": 0.04035,
+      "lo": 0.03814,
+      "hi": 0.04247
+    },
+    "beat_timing_ms": {
+      "diff": 169.87321,
+      "lo": 165.82443,
+      "hi": 173.90237
+    },
+    "beats_baseline": false
+  },
+  "cnn_limb_lead_residual_mV": {
+    "median": 0.006558150204000856,
+    "p95": 0.017140250047732276,
+    "share_gt_0.01": 0.1932078935291418,
+    "truth_median": 0.0005276823843378427
+  }
+}

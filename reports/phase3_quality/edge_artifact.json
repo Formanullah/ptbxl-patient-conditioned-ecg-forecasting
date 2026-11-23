@@ -1,0 +1,55 @@
+{
+  "records": 1490,
+  "phase_error_mV_by_offset_k": [
+    0.008221234619686801,
+    0.0067766819071588364,
+    0.013366865562080539,
+    0.020982276705816556,
+    0.028664358431208053
+  ],
+  "official_vs_reference_interior_mae_mV": {
+    "subsample x500[::5]": 0.008221234619686813,
+    "resample_poly (line padding)": 0.00633527204201785,
+    "resample_poly (zero padding)": 0.00633527204201785
+  },
+  "official_vs_line_padded_last_samples_mV": [
+    0.0065,
+    0.007,
+    0.0351,
+    0.0653,
+    0.0841,
+    0.0988,
+    0.1106,
+    0.1228,
+    0.1281,
+    0.1339,
+    0.1405,
+    0.1508
+  ],
+  "official_vs_line_padded_first_samples_mV": [
+    0.0244,
+    0.0043,
+    0.0066,
+    0.0063,
+    0.006,
+    0.0058,
+    0.0062,
+    0.0062,
+    0.0067,
+    0.0069,
+    0.0068,
+    0.007
+  ],
+  "end_samples_over_3x_interior": 10,
+  "start_samples_over_3x_interior": 1,
+  "amplitude_last_50ms_over_interior": {
+    "official 100 Hz": 1.4451480393217753,
+    "500 Hz subsampled": 1.3291011517633657,
+    "500 Hz (all samples)": 1.3286598688056113
+  },
+  "amplitude_first_50ms_over_interior": {
+    "official 100 Hz": 1.5865322506804729,
+    "500 Hz subsampled": 1.587823028253082,
+    "500 Hz (all samples)": 1.5883050464376176
+  }
+}

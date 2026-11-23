@@ -1,0 +1,137 @@
+{
+  "exact_duplicate_records": 0,
+  "zero_lag_pairs_ge_0.9": 0,
+  "cross_patient_candidates_verified": 76730,
+  "candidate_generator_validation": {
+    "zero_lag_recall_unshifted_copies": 1.0,
+    "template_top5_recall_shifted_copies": 0.99,
+    "verifier_recall_at_0.99_shifted_noise_free": 1.0,
+    "verifier_recall_at_0.99_unshifted_noise_0.01mV": 0.9833333333333333,
+    "verifier_recall_at_0.99_shifted_noise_0.01mV": 0.9866666666666667,
+    "first_attempt_spectral_fingerprint_recall": 0.0
+  },
+  "near_duplicates": {
+    "within_patient_pairs_checked": 3890,
+    "within_patient_pairs_xcorr_ge_0.99": 0,
+    "within_patient_pairs_xcorr_ge_0.95": 7,
+    "within_patient_ge_0.99_same_day": 0,
+    "cross_patient_pairs_xcorr_ge_0.99": 0,
+    "cross_patient_pairs_xcorr_ge_0.95": 9,
+    "cross_patient_ge_0.99_cross_fold": 0,
+    "cross_patient_max_xcorr": 0.9625237470804827,
+    "pairs_ge_0.95_both_paced_share": 1.0
+  },
+  "records_with_any_defect": 302,
+  "pct_records_with_any_defect": 1.5407377174633947,
+  "pct_records_with_any_sqi_flag": 54.60435692056528,
+  "exclusion_rule": {
+    "issues_excluded": [
+      "dropout (>=0.5 s constant)",
+      "plateau at extreme (>=50 ms, |v|>=1 mV)",
+      "lead relation violated (>0.01 mV)",
+      "near-duplicate of another record (xcorr>=0.99)"
+    ],
+    "issues_kept": [
+      "implausible amplitude (>5 mV)"
+    ],
+    "n_excluded_records": 30,
+    "excluded_ecg_ids": [
+      2166,
+      2525,
+      2907,
+      2974,
+      4147,
+      4650,
+      6017,
+      6068,
+      6965,
+      8989,
+      9129,
+      12150,
+      12251,
+      12581,
+      12591,
+      12592,
+      12722,
+      12750,
+      13193,
+      14373,
+      14854,
+      15867,
+      18767,
+      19299,
+      20045,
+      21160,
+      21169,
+      21171,
+      21522,
+      21601
+    ]
+  },
+  "H3_1": {
+    "bw_pp_med -> q_baseline_drift": {
+      "auroc_all": 0.7476354705859762,
+      "auroc_human_validated": 0.6987326422312021,
+      "threshold": 0.75,
+      "pass": false
+    },
+    "hf_ratio_med -> q_static_noise": {
+      "auroc_all": 0.5880620066703905,
+      "auroc_human_validated": 0.6216216160732798,
+      "threshold": 0.7,
+      "pass": false
+    },
+    "burst_med -> q_burst_noise": {
+      "auroc_all": 0.5416102145419206,
+      "auroc_human_validated": 0.5319616806187889,
+      "threshold": 0.7,
+      "pass": false
+    }
+  },
+  "H3_1_pass": false,
+  "posthoc_best_index_per_flag": {
+    "q_baseline_drift": {
+      "index": "bw_pp_max",
+      "auroc_either_direction": 0.8570094629482787
+    },
+    "q_static_noise": {
+      "index": "bw_pp_max",
+      "auroc_either_direction": 0.6167939497299738
+    },
+    "q_burst_noise": {
+      "index": "burst_max",
+      "auroc_either_direction": 0.6583947565468873
+    }
+  },
+  "H3_2_spearman_bw_pp_vs_oracle_mae": 0.6289025028123628,
+  "H3_2_pass": true,
+  "posthoc_spearman_with_oracle_mae_top": {
+    "bw_pp_min": 0.6610365229869097,
+    "bw_pp_max": 0.6378449464386476,
+    "bw_pp_med": 0.6289025028123628,
+    "basSQI_min": -0.5223337569837648,
+    "tSQI_min": -0.4962187600503285,
+    "kSQI_min": -0.4827243900533919,
+    "kSQI_med": -0.45476708962702944,
+    "tSQI_med": -0.4033901133659284
+  },
+  "H3_3_pass": true,
+  "metadata_issues": {
+    "height_lt_100cm_adult": 8,
+    "height_gt_220cm": 0,
+    "weight_lt_20kg_adult": 3,
+    "weight_gt_180kg": 4,
+    "missing_share": {
+      "age": 0.0,
+      "sex": 0.0,
+      "height": 0.6798632722820265,
+      "weight": 0.5742053976837916,
+      "nurse": 0.06402734554359471,
+      "site": 0.0007652670782102954,
+      "device": 0.0,
+      "heart_axis": 0.383347788378144,
+      "infarction_stadium1": 0.7422580480587725,
+      "validated_by": 0.44916075710422937
+    }
+  }
+}

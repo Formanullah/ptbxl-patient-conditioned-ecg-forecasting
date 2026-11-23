@@ -1,0 +1,42 @@
+# Base configuration. Every key is validated against src/ptbxl_forecast/config.py:
+# unknown keys and wrong types are errors. Override from the command line with
+# dot-lists, e.g. `ptbxl-forecast config seed=123 data.horizon=100`.
+study_id: phase1_foundation
+run_name: run
+seed: 42
+
+data:
+  version: "1.0.3"
+  sampling_rate: 100
+  history: 700 # 7 s observed
+  horizon: 290 # 2.9 s forecast (D0.8; last 100 ms removed, D3.4)
+  trim_end: 10 # drop the 500->100 Hz conversion artifact (D3.4); 0 + horizon 300 = unmodified
+  exclude_defects: true # dropout, clipped plateau, limb-lead violation (D3.1)
+  train_folds: [1, 2, 3, 4, 5, 6, 7, 8]
+  val_folds: [9]
+  test_folds: [10] # sealed: loading requires data.allow_test=true
+  allow_test: false
+
+preprocessing: # model inputs only; forecasts are always scored in raw mV (Phase 5)
+  filter: decompose_0.67 # causal 0.67 Hz baseline + residual channels (D5.11)
+  scaler: none # D5.5
+  leads8: false # D5.7
+
+runtime:
+  device: auto # auto | cpu | cuda | cuda:N | mps
+  threads: 4 # CPU results are bitwise reproducible only at a fixed thread count
+  num_workers: 0
+  deterministic: true
+
+paths: # machine-specific; excluded from the config hash
+  data: PTB-XL
+  results: results
+  cache: .cache/data
+
+logging:
+  level: INFO
+
+tracking:
+  mlflow: false # true requires `uv sync --extra tracking`
+  mlflow_uri: sqlite:///results/mlflow.db
+  require_clean_git: false # set true for final, reportable runs

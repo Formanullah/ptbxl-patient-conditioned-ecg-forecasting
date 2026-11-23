@@ -1,0 +1,4 @@
+a,b,fold9_a_beats_b,fold9_b_beats_a,cv_mean_d_mae,cv_p_mae,cv_mean_d_dtw_mae,cv_p_dtw_mae,cv_mean_d_template_mae,cv_p_template_mae,cv_mean_d_beat_timing_ms,cv_p_beat_timing_ms
+cnn,cnn_lstm,False,False,0.0073865,1.1695e-08,0.01325,1.2136e-10,-0.026006,8.0048e-12,-11.756,5.0548e-08
+cnn,transformer,False,False,0.0023505,0.00093731,-0.00013593,0.87795,-0.0029578,0.044252,-14.165,0.10663
+cnn_lstm,transformer,False,False,-0.005036,3.2632e-06,-0.013386,3.3872e-07,0.023048,1.015e-07,-2.4091,0.75922

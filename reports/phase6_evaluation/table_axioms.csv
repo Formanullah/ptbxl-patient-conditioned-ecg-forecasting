@@ -1,0 +1,15 @@
+,A1_shift50_beats_flat,A1_shift20_beats_flat,A2_monotone_shift,A3_monotone_amplitude,A4_penalizes_blur,A5_penalizes_missing_beat,A6_max_nan_rate,flat_beats_sn4,family,passes_family_axioms
+mae,False,True,True,True,True,True,0.0,True,pointwise,True
+rmse,False,True,True,True,True,True,0.0,True,pointwise,True
+mse,False,True,True,True,True,True,0.0,True,pointwise,True
+mae_8lead,False,True,True,True,True,True,0.0,True,pointwise,True
+snr_db,False,True,True,True,True,True,0.0,False,pointwise,True
+pearson,True,True,True,False,True,True,0.0,False,correlation,True
+dtw_mae,True,True,True,True,True,True,0.0,False,timing-tolerant,True
+template_mae,True,True,True,True,True,True,0.0036789126769199328,False,morphology,True
+r_amp_err,True,True,True,True,True,True,0.0036789126769199328,False,morphology,True
+st_err,True,True,True,True,True,True,0.0036789126769199328,False,morphology,True
+t_amp_err,True,True,True,True,True,True,0.0036789126769199328,False,morphology,True
+beat_f1,True,True,False,True,True,True,0.0,False,rhythm,False
+beat_timing_ms,True,True,True,True,True,True,0.0,False,rhythm,True
+rr_err_ms,False,False,True,True,True,True,1.0,False,rhythm,False

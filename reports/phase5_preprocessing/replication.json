@@ -1,0 +1,100 @@
+{
+  "aug_gaussian_noise": {
+    "new_seeds": {
+      "mae": {
+        "diff": 0.000154,
+        "lo": -6.8e-05,
+        "hi": 0.000353
+      },
+      "dtw_mae": {
+        "diff": 0.000376,
+        "lo": 0.00015,
+        "hi": 0.000582
+      },
+      "template_mae": {
+        "diff": -0.0004,
+        "lo": -0.001051,
+        "hi": 9e-06
+      },
+      "beat_timing_ms": {
+        "diff": 1.206564,
+        "lo": -2.275913,
+        "hi": 4.648177
+      },
+      "beats_default": false
+    },
+    "six_seeds": {
+      "mae": {
+        "diff": 3.7e-05,
+        "lo": -6.3e-05,
+        "hi": 0.000122
+      },
+      "dtw_mae": {
+        "diff": 0.000132,
+        "lo": 3.1e-05,
+        "hi": 0.000217
+      },
+      "template_mae": {
+        "diff": -0.00019,
+        "lo": -0.000766,
+        "hi": 0.000185
+      },
+      "beat_timing_ms": {
+        "diff": -3.583691,
+        "lo": -6.764562,
+        "hi": -0.292561
+      },
+      "beats_default": false
+    },
+    "adopt": false
+  },
+  "filter_decompose_0.67": {
+    "new_seeds": {
+      "mae": {
+        "diff": -0.00039,
+        "lo": -0.000656,
+        "hi": -0.000197
+      },
+      "dtw_mae": {
+        "diff": -0.000373,
+        "lo": -0.000629,
+        "hi": -0.000182
+      },
+      "template_mae": {
+        "diff": -0.000247,
+        "lo": -0.000934,
+        "hi": 0.000179
+      },
+      "beat_timing_ms": {
+        "diff": 2.310143,
+        "lo": -1.353015,
+        "hi": 5.7084
+      },
+      "beats_default": true
+    },
+    "six_seeds": {
+      "mae": {
+        "diff": -0.000344,
+        "lo": -0.000669,
+        "hi": -0.000116
+      },
+      "dtw_mae": {
+        "diff": -8.8e-05,
+        "lo": -0.000421,
+        "hi": 0.000146
+      },
+      "template_mae": {
+        "diff": -6.9e-05,
+        "lo": -0.000335,
+        "hi": 0.000155
+      },
+      "beat_timing_ms": {
+        "diff": -0.189972,
+        "lo": -3.4422,
+        "hi": 3.169675
+      },
+      "beats_default": true
+    },
+    "adopt": true
+  }
+}

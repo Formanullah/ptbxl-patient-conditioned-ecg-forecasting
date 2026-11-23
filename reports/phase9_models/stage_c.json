@@ -1,0 +1,24 @@
+{
+  "minutes": 469.4482514154981,
+  "families": [
+    "cnn",
+    "cnn_lstm",
+    "transformer"
+  ],
+  "cv_mean_mae": {
+    "cnn_lstm": 0.0865762281264771,
+    "transformer": 0.09161226059165894,
+    "cnn": 0.09396275334339876
+  },
+  "fold9_mae_3seed_ens": {
+    "cnn_lstm": 0.08871562288820717,
+    "transformer": 0.09140259350597127,
+    "cnn": 0.0953841543801689
+  },
+  "best_family_under_L1": null,
+  "carried_to_phase10": [
+    "cnn_lstm",
+    "transformer"
+  ],
+  "H9_3_pass": true
+}

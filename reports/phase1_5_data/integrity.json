@@ -1,0 +1,114 @@
+{
+  "C1_required_files": {
+    "pass": true,
+    "missing": []
+  },
+  "C2_checksum_list_sources": {
+    "pass": true,
+    "local": "b7224b92b341511ec3ceb13dc6652079b2c36a06504bcb49506f157f51dc695d",
+    "physionet.org": "b7224b92b341511ec3ceb13dc6652079b2c36a06504bcb49506f157f51dc695d",
+    "s3": "b7224b92b341511ec3ceb13dc6652079b2c36a06504bcb49506f157f51dc695d"
+  },
+  "C3_checksums": {
+    "pass": true,
+    "files_checked": 43604,
+    "status": {
+      "ok": 43604
+    },
+    "bad": []
+  },
+  "C4_unexpected_files": {
+    "pass": true,
+    "n_files_on_disk": 43598,
+    "extra": []
+  },
+  "C5_counts": {
+    "pass": true,
+    "records": 21799,
+    "patients": 18869,
+    "expected": [
+      21799,
+      18869
+    ]
+  },
+  "C6_structure": {
+    "pass": true,
+    "filename_lr_matches_ecg_id": true,
+    "records_missing_hea_or_dat": [],
+    "orphan_record_files": [],
+    "n_folders": 22,
+    "max_records_per_folder": 1000
+  },
+  "C7_headers": {
+    "pass": true,
+    "headers_checked": 21799,
+    "problems": {},
+    "adc_gain_values": {
+      "1000.0": 21799
+    },
+    "lead_names_as_stored": "I II III AVR AVL AVF V1-V6 (upper case)"
+  },
+  "C8_signals_folds_1_9": {
+    "pass": true,
+    "records_read": 19601,
+    "problems": {},
+    "failing_ecg_ids": [],
+    "adc_range": [
+      -20032,
+      17212
+    ],
+    "records_touching_int16_limits": 0
+  },
+  "C9_metadata": {
+    "pass": false,
+    "ecg_id_unique": true,
+    "strat_fold_in_1_10": true,
+    "all_scp_codes_defined": true,
+    "RECORDS_matches_database": false,
+    "patient_in_single_fold": true,
+    "no_v103_dropped_duplicates_present": true,
+    "ecg_ids_are_1_to_max_minus_dropped": true,
+    "undefined_scp_codes": [],
+    "n_dropped_ids_in_changelog": 38,
+    "RECORDS_entries": 43597,
+    "RECORDS_fused_entries": [
+      "records100/21000/21837_lrrecords500/00000/00001_hr"
+    ],
+    "RECORDS_matches_database_after_splitting_fused": true,
+    "patients_in_multiple_folds": 0
+  },
+  "dataset_record": {
+    "dataset": "PTB-XL",
+    "version": "1.0.3",
+    "doi": "10.13026/kfzx-aw45",
+    "sha256sums_sha256": "b7224b92b341511ec3ceb13dc6652079b2c36a06504bcb49506f157f51dc695d",
+    "files_used": 43604,
+    "bytes_used": 544107413,
+    "records_per_fold": {
+      "1": 2175,
+      "2": 2181,
+      "3": 2192,
+      "4": 2174,
+      "5": 2174,
+      "6": 2173,
+      "7": 2176,
+      "8": 2173,
+      "9": 2183,
+      "10": 2198
+    },
+    "patients_per_fold": {
+      "1": 1878,
+      "2": 1849,
+      "3": 1887,
+      "4": 1883,
+      "5": 1890,
+      "6": 1884,
+      "7": 1871,
+      "8": 1881,
+      "9": 1942,
+      "10": 1904
+    }
+  },
+  "all_pass": false,
+  "runtime_s": 14.5
+}

@@ -1,0 +1,12 @@
+python_s3_32threads        first=   15.4s verified=1974/1974 rerun=.436603353s
+python_physionet_32thr     first=  142.3s verified=1974/1974 rerun=.384185754s
+curl_parallel_s3_32        first=    0.9s verified=1974/1974 rerun=.937960376s(re-downloads)
+aws_cli_s3_sync            first=    7.1s verified=1974/1974 rerun=2.354232627s
+pwsh7_parallel_s3_32       first=   45.1s verified=1974/1974 rerun=10.274464393s
+zipinfo:  cannot find or open /local/xm476/p15bench/ptbxl.zip, /local/xm476/p15bench/ptbxl.zip.zip or /local/xm476/p15bench/ptbxl.zip.ZIP.
+mv: cannot stat '/local/xm476/p15bench/d_zip//records100': No such file or directory
+du: cannot access '/local/xm476/p15bench/ptbxl.zip': No such file or directory
+zip_full_1.84GB            first=    0.4s verified=   0/1974 rerun=unzip-subset=.004469736s,size=
+wget_list_s3               ran=   4.6s verified=1974 rate=427.65 files/s -> est. 5 s for 1,974 files, 0.0 h for 43,602
+wget_recursive_physionet   ran= 300.0s verified= 334 rate=1.11 files/s -> est. 1773 s for 1,974 files, 10.9 h for 43,602
+pwsh7_sequential_s3        ran= 300.0s verified=1321 rate=4.40 files/s -> est. 448 s for 1,974 files, 2.8 h for 43,602

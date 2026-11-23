@@ -1,0 +1,26 @@
+{
+  "bitwise_reproduction_of_phase5": {
+    "42": true,
+    "123": true,
+    "999": true
+  },
+  "minimum_useful_fraction": 0.2,
+  "saturation_fraction": 0.8,
+  "diminishing_returns_first_doubling": "40%->80%",
+  "H7_1_mae60_rel_to_100": 0.005660519929736818,
+  "H7_1_pass": true,
+  "H7_2_timing_improvement_20_to_100": -0.005370478185183769,
+  "H7_2_100pct_beats_sn4_on_timing": false,
+  "H7_3_gap_5pct": 0.006447376266745432,
+  "H7_3_gap_100pct": 0.003077565886441568,
+  "H7_2_pass": true,
+  "H7_3_pass": true,
+  "power_law_fit": {
+    "asymptote_a": 0.09409413595027762,
+    "b": 0.5147000834886788,
+    "exponent_c": 0.6225084721362528,
+    "max_abs_residual": 0.00019273681511626506,
+    "pred_17392_all_train_folds": 0.09527418683133408,
+    "pred_2x_pool": 0.09497522725383378
+  }
+}

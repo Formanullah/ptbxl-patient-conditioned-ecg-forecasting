@@ -1,0 +1,61 @@
+{
+  "H4_1": {
+    "records_all_folds": 21799,
+    "ecg_id_unique": true,
+    "patients_in_more_than_one_partition": 0,
+    "patients_train_val_test": {
+      "train": 15023,
+      "val": 1942,
+      "test": 1904
+    },
+    "multi_record_patients_folds1_9": 1883,
+    "sex_constant_share": 1.0,
+    "age_vs_date_consistent_share": 1.0,
+    "age_vs_date_pairs": 2602,
+    "pass": true
+  },
+  "peak_detection_noncausal_share": 0.013949210566654744,
+  "probe": {
+    "library_anchors_total": 72334,
+    "query_coverage": 0.997087527464105
+  },
+  "H4_2": {
+    "mae_k1_patient_minus_record_by_seed": [
+      0.0015088042445956795,
+      0.0006753652177749203,
+      0.000755885272991641
+    ],
+    "mean_diff": 0.0009800182451207469,
+    "sd_diff": 0.0004597084345033855,
+    "relative_optimism_record_split": 0.006863543273420854,
+    "kfold_mean_diff_gkf_minus_kf": 0.0006189053316449367,
+    "pass": true
+  },
+  "H4_3": {
+    "history_regular_records": 15592,
+    "annotation_rate_future_irregular": 0.2746835443037975,
+    "n_future_irregular": 790,
+    "annotation_rate_future_regular": 0.023780570193217134,
+    "n_future_regular": 14802,
+    "ratio": 11.550755178365938,
+    "annotation_rate_history_irregular": 0.4041025641025641,
+    "pass": true
+  },
+  "H4_4": {
+    "target_mean_mae_mV": {
+      "zero-phase low-pass at 6.99 s (non-causal)": 0.0387463882070692,
+      "causal low-pass at 6.99 s": 0.049675938632656756,
+      "history mean": 0.034897007048130035,
+      "mean of last 1 s of history": 0.04559362307190895
+    },
+    "zero_phase_improvement_over_causal": 0.22001698863526886,
+    "pass": true,
+    "causality_violation_mV_example_record": {
+      "zero-phase 0.67 Hz low-pass (sosfiltfilt)": 0.22725201661320982,
+      "causal 0.67 Hz low-pass (sosfilt)": 0.0,
+      "whole-record z-score": 5.188693699803528,
+      "history-only z-score": 0.0,
+      "NeuroKit2 ecg_clean (lead II)": 0.15255133109480765
+    }
+  }
+}

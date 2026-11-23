@@ -1,0 +1,6 @@
+# Normalise line endings so files hash identically on Windows, Linux and macOS.
+* text=auto eol=lf
+*.png binary
+*.pptx binary
+*.pdf binary
+*.ipynb text eol=lf

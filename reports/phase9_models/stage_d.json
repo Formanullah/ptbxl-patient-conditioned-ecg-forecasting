@@ -1,0 +1,44 @@
+{
+  "family": "cnn_lstm",
+  "minutes": 50.310920818483766,
+  "delta_8_minus_12": {
+    "d_mae": 2.913925525156533,
+    "d_mae_lo": 0.8958379317551991,
+    "d_mae_hi": 5.116800947509031,
+    "d_dtw_mae": 2.979736935344145,
+    "d_dtw_mae_lo": 0.2346605950947252,
+    "d_dtw_mae_hi": 5.936553199546762,
+    "d_template_mae": 1.2469517746422651,
+    "d_template_mae_lo": -2.583559042205112,
+    "d_template_mae_hi": 4.81025986411346,
+    "d_beat_timing_ms": -2.186221336122169,
+    "d_beat_timing_ms_lo": -5.233025673140844,
+    "d_beat_timing_ms_hi": 1.0026633545413772,
+    "beats": false
+  },
+  "limb_residual": {
+    "12-lead": {
+      "median_mV": 0.003190112457712717,
+      "share_gt_0.01": 0.02202845341899954
+    },
+    "8-lead": {
+      "median_mV": 3.5053223126068645e-09,
+      "share_gt_0.01": 0.0
+    }
+  },
+  "ens_8lead": {
+    "mae": 0.0898302207824571,
+    "dtw_mae": 0.0795272331159842,
+    "template_mae": 0.13250012933106184,
+    "beat_timing_ms": 268.06111592297736,
+    "share_timing_le_50ms": 0.0027535566773749425
+  },
+  "ens_12lead": {
+    "mae": 0.08738930287479514,
+    "dtw_mae": 0.07701800930026814,
+    "template_mae": 0.13066038490523396,
+    "beat_timing_ms": 271.2653946958901,
+    "share_timing_le_50ms": 0.004130335016062414
+  },
+  "H9_4_pass": false
+}

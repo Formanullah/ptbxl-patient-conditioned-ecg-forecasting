@@ -1,27 +1,21 @@
+# Environments and caches
 /.venv/
-/PTB-XL/
-/data/
-/experiments/
-/outputs/*
-!/outputs/pilot/
-!/outputs/research_100hz_dev/
-/outputs/pilot/smoke/
-.DS_Store
+.cache/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-.pytest-temp/
 .ruff_cache/
-.cache/
-.pipeline.lock
 .ipynb_checkpoints/
-*.pdf
+.DS_Store
+
+# Data, results and large binaries (reproduced from code; never committed)
+/PTB-XL/
+/data/
+/results/
+/mlruns/
 *.pt
 *.npz
 *.npy
-# Reversible local cleanup archives and future transfer bundles.
 *.zip
-
-/results/
-/notebooks/*executed*.ipynb
+*.part

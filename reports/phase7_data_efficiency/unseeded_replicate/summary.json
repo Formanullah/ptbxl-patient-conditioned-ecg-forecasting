@@ -1,0 +1,18 @@
+{
+  "bitwise_reproduction_of_phase5": {
+    "42": false,
+    "123": false,
+    "999": false
+  },
+  "minimum_useful_fraction": 0.8,
+  "saturation_fraction": 0.6,
+  "diminishing_returns_first_doubling": null,
+  "H7_1_mae60_rel_to_100": 0.0021937820157760246,
+  "H7_1_pass": true,
+  "H7_2_timing_improvement_20_to_100": 0.0085663720632152,
+  "H7_2_100pct_beats_sn4_on_timing": false,
+  "H7_3_gap_5pct": 0.006104732254818404,
+  "H7_3_gap_100pct": 0.002847039478868834,
+  "H7_2_pass": true,
+  "H7_3_pass": true
+}

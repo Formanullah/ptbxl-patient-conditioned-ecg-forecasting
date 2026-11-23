@@ -1,0 +1,15 @@
+,sn4_vs_median,oracle_vs_sn4
+mae,0.177,-1.116
+rmse,0.041,-1.274
+mse,0.048,-0.683
+mae_8lead,0.174,-1.118
+snr_db,-0.033,-1.401
+pearson,-0.839,-1.918
+dtw_mae,-0.862,-0.541
+template_mae,-0.744,-0.576
+r_amp_err,-1.546,-1.062
+st_err,-0.066,-0.332
+t_amp_err,-0.955,-0.392
+beat_f1,-1.304,-1.118
+beat_timing_ms,-2.701,-1.109
+rr_err_ms,0.000,-0.478
