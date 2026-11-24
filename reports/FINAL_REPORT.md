@@ -1,6 +1,6 @@
 # Forecasting the 12-lead ECG on PTB-XL: a leakage-controlled study of what can be predicted, and how to measure it
 
-*Report covering Phases 0–16 and 18 · 2026-11-24 · Phase 17 (one-time fold-10 test) not yet run (§8)*
+*Final report, Phases 0–19 · 2026-11-24 · includes the one-time fold-10 test (§8)*
 
 ## Abstract
 
@@ -10,8 +10,9 @@ the first 7 s of a native 100 Hz recording, forecast the next 2.9 s.
 **Methods.**
 - **Data and splits.** The data were verified file by file, defect records were
   excluded by fixed rules, and every split is patient-level. The official test fold
-  (fold 10) was **sealed throughout**: all numbers here are from validation (fold 9)
-  or 9-fold cross-validation over folds 1–9.
+  (fold 10) was **sealed until the final model was frozen** and then evaluated once;
+  all other numbers are from validation (fold 9) or 9-fold cross-validation over
+  folds 1–9.
 - **Evaluation.** Pointwise error alone **ranks a flat line above a perfectly shaped
   ECG that is only 50 ms late**. We therefore built a metric suite: MAE as the primary
   metric, plus three gatekeepers (timing-tolerant shape via DTW-MAE, beat-template
@@ -41,16 +42,21 @@ the first 7 s of a native 100 Hz recording, forecast the next 2.9 s.
 - **Conditioning on the repeat-beats forecast is what helps (Phases 10–18).** A
   CNN-LSTM that learns a per-step, per-lead gate on the `sn4` repeat-beats forecast,
   plus a correction, beats the flat line and the L1 CNN-LSTM on MAE *and* every
-  gatekeeper in 9/9 folds (final model: MAE 0.0840 mV, template 0.089 mV, timing
-  114 ms vs L1 0.0866 / 0.131 / 270). It still does **not** beat `sn4` on beat
-  morphology or timing: it forecasts damped copies of the repeated beats (≈ 28% of
-  true amplitude). Its gain over L1 comes entirely from the most periodic 40% of
-  records; in AF/flutter it is no better than L1.
+  gatekeeper in 9/9 folds (MAE 0.0850 mV, template 0.088 mV, timing 109 ms vs L1
+  0.0866 / 0.131 / 270). It still does **not** beat `sn4` on beat morphology or
+  timing: it forecasts damped copies of the repeated beats (≈ 28% of true
+  amplitude). Its gain over L1 comes entirely from the most periodic 40% of records;
+  in AF/flutter it is no better than L1.
+- **Held-out test (fold 10, run once).** The frozen model reproduced the CV result:
+  MAE 0.0850 mV (L1 CNN-LSTM 0.0861, flat 0.1207, `sn4` 0.1239), template MAE 0.090,
+  timing 110 ms. It beats flat and the L1 CNN-LSTM on MAE and every gatekeeper, and
+  is worse than `sn4` on template MAE (+27 µV) and timing (+32 ms).
 
 **Conclusion.** The learning objective, not data, preprocessing or architecture, was
 the bottleneck under L1; passing a causal repeat-beats forecast through a learned
-gate is the first change that improves accuracy and plausibility together. No
-held-out test result exists yet (fold 10 sealed).
+gate is the first change that improves accuracy and plausibility together, and the
+improvement held on unseen patients. Forecasting beats that are both accurate and as
+faithful as the history itself remains unsolved.
 
 ---
 
@@ -274,9 +280,9 @@ family on that holdout.
 
 ## 6. Limitations
 
-- **No held-out test numbers yet.** Fold 10 remains sealed on purpose, until the
-  final model is fixed. Validation numbers can be optimistic for the selected models;
-  9-fold CV limits this for the finalists.
+- **One held-out fold.** Fold 10 was opened once, for the final model only (§8). The
+  numbers for every other model are development numbers, which can be optimistic for
+  the selected models; 9-fold CV limits this for the finalists.
 - **CPU-only compute.**
   - PatchTST was run in a reduced configuration.
   - Each family used one configuration (only the learning rate was checked).
@@ -296,7 +302,7 @@ family on pointwise and timing-tolerant error, but no model yet produces
 physiologically plausible beats. The next step is the training objective, not more
 data, preprocessing or capacity.
 
-## 8. Phases 10–18 (2026-11-24)
+## 8. Phases 10–19, including the fold-10 test (2026-11-24)
 
 | Phase | Result | Report |
 |---|---|---|
@@ -306,18 +312,20 @@ data, preprocessing or capacity.
 | 13 Plausibility | Correct beat count, 34% of records ≤ 50 ms, but beats damped to ≈ 28% amplitude; limb-lead relations broken in 19% of records (L1: 3%) by the per-lead gate | [13](phase13_plausibility/REPORT.md) |
 | 14 Patient factors | After adjustment, error rises with AF/flutter (+27%), hypertrophy (+24%), pacing (+23%) and baseline wander; device effects mostly vanish | [14](phase14_patient_errors/REPORT.md) |
 | 15 Signal factors | Gain over L1 only in the most periodic 40% of records (+15 µV in the top quintile; −1.5 µV in the bottom); the gate tracks periodicity (ρ 0.47) and fades with horizon (0.36 → 0.16) | [15](phase15_signal_errors/REPORT.md) |
-| 16 Final model | Hidden-256 gated CNN-LSTM, 6 seeds on folds 1–9, hashed in `MANIFEST.json`; L1 reference likewise | [16](phase16_final/REPORT.md) |
-| 17 Test (fold 10) | **Not run** (user decision); pre-registered, script dry-run checked on fold 9 | [17](phase17_test/PREREGISTRATION.md) |
+| 16 Final model | First frozen with hidden 256; **reverted to hidden 128 (D12.1)** after the CV finding, before fold 10 was opened; 6 seeds on folds 1–9, hashed in `MANIFEST.json`; L1 reference likewise | [16](phase16_final/REPORT.md) |
+| 17 Test (fold 10, once) | MAE 0.0850 mV; beats flat (−32.4 µV) and L1 (−1.7 µV [−2.6, −0.9], every gatekeeper better); worse than `sn4` on template (+27 µV) and timing (+32 ms). Matches CV expectations | [17](phase17_test/REPORT.md) |
 | 18 Ablations | Skip path essential (`sn4` as input only = no `sn4`); removing the gate restores `sn4`-quality shape/timing at +16 µV MAE; **raw input beats the adopted decomposition** (−1.1 µV MAE) | [18](phase18_ablations/REPORT.md) |
 
-**Open decisions before the test (D12.1, D18.1):** Phase 12's CV and Phase 18's
-ablation each point to a variant that the pre-registered fold-9 rules did not select
-(hidden 128 rather than 256; raw input rather than the decomposition). Fold 10 is
-still sealed, so the final model can still be changed on development evidence alone.
+**Decisions before the test (D12.1, D18.1, user):** Phase 12's CV favoured hidden
+128 over the fold-9 choice of 256, so the final model reverted to 128. Phase 18 found
+raw input better than the adopted decomposition on fold 9 only; the decomposition was
+kept. Phases 12–15 and 18 analysed hidden 256, which differs from the final model by
+≈ 1 µV MAE.
 
 **Additional limitations (Phases 10–18).** One family (CNN-LSTM) for the objectives;
 selection on fold 9 with confirmation only partly multi-fold; gate applied per lead
-(breaks lead relations); detector-dependent timing metric; all results on folds 1–9.
+(breaks lead relations); detector-dependent timing metric; a single held-out fold
+from the same dataset (no external validation).
 
 ## 9. Reproducing this report
 

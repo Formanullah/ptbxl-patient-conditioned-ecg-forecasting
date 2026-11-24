@@ -1,0 +1,5 @@
+arm,mae_single_mean,dtw_mae_single_mean,template_mae_single_mean,beat_timing_ms_single_mean,ens_mae,ens_dtw_mae,ens_template_mae,ens_beat_timing_ms,ens_share_timing_le_50ms
+final,0.0882838,0.0702018,0.0929693,120.036,0.0850201,0.0681884,0.0901649,110.138,0.358508
+l1,0.0899903,0.0761164,0.133592,265.491,0.0860976,0.0748779,0.136331,269.633,0.0022748
+flat,,,,,0.120728,0.120728,0.105542,299.238,0.00318471
+sn4,,,,,0.123884,0.0819433,0.0660208,88.4569,0.43949

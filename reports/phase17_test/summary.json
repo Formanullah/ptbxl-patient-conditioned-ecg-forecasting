@@ -1,0 +1,10 @@
+{
+  "mode": "fold 10 one-time test",
+  "records": 2198,
+  "patients": 1904,
+  "final_beats": {
+    "flat": true,
+    "sn4": false,
+    "l1": true
+  }
+}

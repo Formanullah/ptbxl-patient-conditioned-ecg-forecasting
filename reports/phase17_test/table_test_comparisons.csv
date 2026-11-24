@@ -1,0 +1,4 @@
+vs,d_mae,d_mae_lo,d_mae_hi,d_dtw_mae,d_dtw_mae_lo,d_dtw_mae_hi,d_template_mae,d_template_mae_lo,d_template_mae_hi,d_beat_timing_ms,d_beat_timing_ms_lo,d_beat_timing_ms_hi,beats
+flat,-32.444,-34.392,-30.659,-50.526,-52.552,-48.543,-12.572,-15.539,-9.4528,-179.2,-185.22,-172.8,True
+sn4,-35.601,-37.193,-34.161,-11.742,-13.577,-10.086,26.949,23.541,30.44,31.579,26.212,37.587,False
+l1,-1.7064,-2.5712,-0.84682,-5.9146,-6.9653,-4.8504,-40.622,-43.851,-37.405,-145.46,-152.25,-138.45,True
