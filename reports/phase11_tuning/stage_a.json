@@ -1,0 +1,8 @@
+{
+  "shortlist": [
+    "hidden256"
+  ],
+  "base_holdout_mae": 0.08651928573022716,
+  "base_rerun_bitwise_identical": true,
+  "minutes": 88.4273123160509
+}

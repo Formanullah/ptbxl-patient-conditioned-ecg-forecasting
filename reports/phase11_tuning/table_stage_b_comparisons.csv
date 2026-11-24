@@ -1,0 +1,2 @@
+candidate,vs,d_mae,d_mae_lo,d_mae_hi,d_dtw_mae,d_dtw_mae_lo,d_dtw_mae_hi,d_template_mae,d_template_mae_lo,d_template_mae_hi,d_beat_timing_ms,d_beat_timing_ms_lo,d_beat_timing_ms_hi,beats
+hidden256,base,-0.76738,-1.4425,-0.17927,-1.5515,-2.3903,-0.7288,-0.0033987,-2.2392,2.1506,1.6931,-4.3971,6.9122,True

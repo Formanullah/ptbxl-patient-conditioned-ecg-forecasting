@@ -1,0 +1,3 @@
+candidate,mae_seed_mean,dtw_mae_seed_mean,template_mae_seed_mean,beat_timing_ms_seed_mean,ens_mae,ens_dtw_mae,ens_template_mae,ens_beat_timing_ms,ens_share_timing_le_50ms
+base,0.0889471,0.0709517,0.0934188,124.767,0.0855665,0.0688987,0.0904731,112.574,0.351078
+hidden256,0.0881797,0.0694002,0.0934154,126.46,0.0850478,0.0678281,0.0904657,113.767,0.339146

@@ -1,0 +1,17 @@
+{
+  "winners": [
+    "hidden256"
+  ],
+  "final": "hidden256",
+  "final_config": {
+    "model": "gated",
+    "width": 64,
+    "hidden": 256,
+    "layers": 2,
+    "lr": 0.001,
+    "batch": 64,
+    "aux": "l1",
+    "lam": 0.0
+  },
+  "minutes": 102.23810886349916
+}

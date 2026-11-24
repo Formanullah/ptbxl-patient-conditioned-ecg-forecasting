@@ -23,7 +23,8 @@ phase by phase. Each phase ends with a report and a recorded go/no-go decision i
 | 8 Validation strategy | Done: select on fold 9 (ranking = 9-fold CV); old comparison rule had a 41% false-positive rate → 6 runs per arm + run-and-patient bootstrap (`compare_runs`, D8.3) | [report](reports/phase8_validation/REPORT.md) |
 | 9 Model development | Done: CNN-LSTM best on MAE/DTW (−7.9% vs CNN, 9-fold CV) but worse beat morphology; no family beats `sn4`; CNN-LSTM + Transformer carried to Phase 10 | [report](reports/phase9_models/REPORT.md) |
 | 10 Training objectives | Done: CNN-LSTM conditioned on the `sn4` forecast beats flat and L1 CNN-LSTM on MAE and every gatekeeper (9-fold CV, 9/9 folds); still worse than `sn4` on morphology and timing; spectral loss helps shape but costs MAE; derivative loss no effect | [report](reports/phase10_objectives/REPORT.md) |
-| 11 Hyperparameters | Next | – |
+| 11 Hyperparameters | Done: LSTM hidden 256 adopted (−0.77 µV MAE on fold 9, gatekeepers n.s.); spectral term trades MAE for morphology | [report](reports/phase11_tuning/REPORT.md) |
+| 12–18 | Running | pre-registrations in `reports/phase1*/` |
 
 ## Setup (Windows, Linux, macOS; no admin rights needed)
 
