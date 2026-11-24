@@ -9,6 +9,10 @@ phase by phase. Each phase ends with a report and a recorded go/no-go decision i
 
 **Consolidated report (Phases 0–19): [reports/FINAL_REPORT.md](reports/FINAL_REPORT.md).**
 
+**Study guide (reading order, glossary, self-test): [reports/STUDY_GUIDE.md](reports/STUDY_GUIDE.md).**
+
+Presentation (32 slides with speaker notes): [reports/presentation/PTBXL_ECG_forecasting.pptx](reports/presentation/PTBXL_ECG_forecasting.pptx).
+
 | Phase | Status | Report |
 |---|---|---|
 | 0 Forecasting feasibility | Done: 7→3 kept, with timing-aware evaluation (D0.8) | [report](reports/phase0_feasibility/REPORT.md) |

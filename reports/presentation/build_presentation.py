@@ -1,4 +1,4 @@
-"""Build the study presentation (27 slides with speaker notes).
+"""Build the study presentation (32 slides with speaker notes).
 
 uv run --locked python reports/presentation/charts.py     # figures (needs caches)
 uv run --locked python reports/presentation/explain.py    # saliency figures (needs caches)
@@ -298,7 +298,7 @@ notes(
         ),
         (
             "Is the device effect a confounder for model comparisons?",
-            "Comparisons are paired on the same records, so device mix cancels; it matters for absolute numbers and subgroup reporting (slide 18).",
+            "Comparisons are paired on the same records, so device mix cancels; it matters for absolute numbers and subgroup reporting (slide 21).",
         ),
     ],
 )
@@ -428,7 +428,7 @@ notes(
         "The decomposition feeds the network a causal 0.67 Hz baseline estimate plus the residual; it is lossless and leaves the target unchanged. It passed the rule and a pre-specified replication with three new seeds.",
     ],
     [
-        "Gaussian-noise augmentation passed once and failed replication — an early warning that sub-µV effects flip with training randomness, motivating the run-aware statistics on slide 17.",
+        "Gaussian-noise augmentation passed once and failed replication — an early warning that sub-µV effects flip with training randomness, motivating the run-aware statistics on slide 19.",
         "Honesty point: the Phase 18 ablation on the final model found raw input better by 1.1 µV on fold 9. Because it was a single-fold result, the user decided to keep the decomposition (D18.1).",
     ],
     [
@@ -707,7 +707,7 @@ notes(
 s = slide(
     "RQ5 · PatchTST",
     "PatchTST (CPU-reduced): CNN-level accuracy at the highest cost",
-    "Source: Phase 9 report; fold 9, 6 seeds; measured compute (slide 22)",
+    "Source: Phase 9 report; fold 9, 6 seeds; measured compute (slide 26)",
 )
 s.image(FIG / "families_patchtst.png", 0.45, 1.6, 12.4, 3.1)
 s.table(0.45, 4.85, [2.6, 3.6], [
@@ -825,7 +825,7 @@ notes(
     ],
     [
         "λ for auxiliary losses was chosen on the internal holdout (never fold 9) from {0.3, 1, 3}; derivative λ = 0.3, spectral λ = 0.3 (fallback rule: no λ met the 2% MAE tolerance).",
-        "The gated model adds a second linear head (+0.45 M parameters); capacity was not controlled, but Phase 18's ablation shows the gain comes from the sn4 skip path, not capacity (slide 21).",
+        "The gated model adds a second linear head (+0.45 M parameters); capacity was not controlled, but Phase 18's ablation shows the gain comes from the sn4 skip path, not capacity (slide 25).",
         "Soft-DTW was deferred: 10-30× slower on CPU.",
     ],
     [
@@ -840,7 +840,145 @@ notes(
     ],
 )
 
-# =============================================================== 17 Reliability
+# =============================================================== 17 Final model architecture
+s = slide(
+    "RQ6 · Final model architecture",
+    "sn4-gated CNN-LSTM: the network learns how far to trust the repeated beats, step by step and lead by lead",
+    "Sources: src/ptbxl_forecast/models/gated_baseline.py; Phase 0 (sn4), Phase 10 (objective), Phase 11 (settings), Phase 16 (frozen hidden-128 configuration)",
+)
+s.shape(
+    0.45, 1.8, 2.0, 1.15, fill=GREY, text="7 s history\n700 × 24 ch\nbaseline + residual", size=12
+)
+s.shape(2.55, 2.2, 0.4, 0.35, prst="rightArrow", fill=GREY)
+s.shape(
+    3.05,
+    1.8,
+    2.0,
+    1.15,
+    fill=NAVY,
+    text="Conv stem\n2 × Conv1d (k 7, s 2)\n700 → 175 steps",
+    size=12,
+)
+s.shape(5.15, 2.2, 0.4, 0.35, prst="rightArrow", fill=GREY)
+s.shape(5.65, 1.8, 1.7, 1.15, fill=NAVY, text="LSTM\n2 layers\nhidden 128 → h", size=12)
+s.shape(7.45, 2.2, 0.4, 0.35, prst="rightArrow", fill=GREY)
+s.shape(7.95, 1.65, 2.2, 0.65, fill=TEAL, text="Gate g = σ(Linear(h))", size=12)
+s.shape(7.95, 2.45, 2.2, 0.65, fill=TEAL, text="Correction c = Linear(h)", size=12)
+s.shape(1.25, 3.05, 0.35, 0.55, prst="downArrow", fill=GREY)
+s.shape(
+    0.45,
+    3.7,
+    4.6,
+    1.0,
+    fill=GREY,
+    text="sn4 (no learning, causal)\nperiod from multi-lead ACF of the history;\nmean of last 4 cycles, level-matched, repeated",
+    size=12,
+)
+s.shape(5.15, 4.03, 2.7, 0.35, prst="rightArrow", fill=GREY)
+s.shape(8.9, 3.17, 0.35, 0.45, prst="downArrow", fill=GREY)
+s.shape(7.95, 3.7, 2.2, 1.0, fill=RED, text="ŷ = g ⊙ sn4 + c\n290 × 12, raw mV", size=14)
+s.text(10.4, 1.65, 2.6, 3.2, [
+    "**Gate:** one value per horizon step × lead (3,480)",
+    "**g → 0:** plain L1 CNN-LSTM",
+    "**g → 1, c = 0:** sn4",
+    "**Skip path:** sn4 bypasses the network, so it cannot be ignored",
+], size=12)  # fmt: skip
+s.table(0.45, 4.95, [2.6, 9.8], [
+    ["Setting", "Value"],
+    ["Training", "L1 loss, AdamW, lr 1e-3, batch 64, early stopping on a 20% internal patient holdout (≤ 100 epochs)"],
+    ["Size / data", "1.17 M parameters (+0.45 M vs L1 CNN-LSTM: gate head); 15,592 training records from folds 1–9"],
+    ["Final forecast", "Mean of 6 seeds; weights, pipelines and config frozen with SHA-256 hashes before fold 10 was opened"],
+], size=11.5, row_h=0.36)  # fmt: skip
+key(
+    s,
+    0.45,
+    6.45,
+    12.4,
+    0.5,
+    "The network never has to learn beat timing: sn4 supplies it causally; the network decides when to trust it.",
+    12.5,
+)
+notes(
+    s,
+    "Make the final model concrete: the rest of the talk (robustness, plausibility, ablations, test) refers to its gate and skip path.",
+    [
+        "sn4 is the Phase 0 seasonal-naive baseline: the cycle length is estimated from the autocorrelation of the first difference of all leads (searched near the median R-R interval of the history), and the forecast is the average of the last four cycles, each level-matched to the most recent cycle. It uses the history only.",
+        "The CNN-LSTM body is the Phase 9 model. Its last hidden state h feeds two linear heads: a sigmoid gate (290 steps × 12 leads) that scales sn4, and a correction that is added. This is a residual formulation around a strong causal prior.",
+    ],
+    [
+        "Limiting cases make the design easy to reason about: a closed gate gives back the L1 CNN-LSTM, an open gate with no correction gives back sn4. The model can only do better than both by choosing between them per step and lead.",
+        "The gate being per lead is also its weakness: limb-lead relations (III = II − I, etc.) are no longer guaranteed (Phase 13, slide 23).",
+    ],
+    [
+        "Phase 11 tuned on fold 9 and preferred hidden 256; 9-fold CV reversed this (D12.1), so the frozen model uses hidden 128 (slide 18).",
+        "sn4 costs ≈ 7.5 ms per record on CPU (R-peak detection + period estimation) and dominates inference time (slide 26).",
+    ],
+    [
+        (
+            "Why not feed sn4 as an input channel instead?",
+            "Phase 18 tested exactly that: the network then ignores it (timing 264 ms, the same as without sn4). The skip path is essential (slide 25).",
+        ),
+        (
+            "Why a sigmoid gate rather than a free weight?",
+            "It keeps the model between the two interpretable limits (0 = no sn4, 1 = full sn4) and makes the gate readable as trust (slide 24).",
+        ),
+    ],
+)
+
+# =============================================================== 18 Tuning
+s = slide(
+    "RQ6 · Hyperparameter tuning",
+    "Only a larger LSTM lowered MAE — and every setting that lowered MAE less forecast sharper, better-timed beats",
+    "Source: Phase 11 report (stage A: internal holdout, seed 42, one change at a time; stage B: fold 9, 6 vs 6 runs); Phase 12 (9-fold CV); D12.1",
+)
+s.table(0.45, 1.7, [2.1, 1.0, 1.15, 1.15, 1.25, 1.15], [
+    ["Stage A", "Params", "MAE", "DTW", "Template", "Timing"],
+    ["base (Phase 10)", "1.17 M", "0.0865", "0.0691", "0.0912", "119"],
+    ["hidden 256", "2.68 M", "0.0855", "0.0668", "0.0913", "124"],
+    ["hidden 64", "0.56 M", "0.0905", "0.0743", "0.0867", "96"],
+    ["3 LSTM layers", "1.30 M", "0.0872", "0.0699", "0.0986", "140"],
+    ["stem width 128", "1.30 M", "0.0877", "0.0691", "0.0876", "113"],
+    ["lr 3e-4", "1.17 M", "0.0919", "0.0733", "0.0851", "91"],
+    ["+ spectral λ 0.1", "1.17 M", "0.0879", "0.0666", "0.0840", "109"],
+    ["+ spectral λ 0.3", "1.17 M", "0.0902", "0.0630", "0.0745", "95"],
+], size=11.5, row_h=0.42, highlight=(2,))  # fmt: skip
+s.text(8.5, 1.65, 4.4, 3.9, [
+    "**Shortlist rule:** ≥ 0.5 µV better holdout MAE → only hidden 256",
+    "**Stage B (fold 9, 6 vs 6):** ΔMAE −0.77 µV [−1.44, −0.18]; gatekeepers n.s. → adopted",
+    "**9-fold CV (Phase 12):** MAE −1.0 µV, but template +1.3 µV (8/9 folds worse) and timing +5.2 ms (9/9) → **reverted to hidden 128** before the test (D12.1)",
+    "**Not tested:** interactions (e.g. hidden 256 + spectral), batch size, dropout",
+], size=12.5)  # fmt: skip
+key(s, 0.45, 5.75, 12.4, 1.05, "Trade-off: spectral λ 0.3 gave the best template (0.075 mV) and timing (95 ms) of any learned model at +3.6 µV MAE. "
+    "The MAE-primary rule rejects it — a rule that weighted morphology would choose differently.", 12.5)  # fmt: skip
+notes(
+    s,
+    "Show what was tuned, what was adopted, and why the adoption was later reversed.",
+    [
+        "Stage A changed one hyperparameter at a time from the Phase 10 configuration and trained one seed per candidate on the internal patient holdout (fold 9 untouched). Only hidden 256 met the pre-registered shortlist threshold.",
+        "Stage B confirmed hidden 256 on fold 9 with 6 runs per arm: a small but significant MAE gain (0.9%) at 2.3× the parameters and about 2× the training time.",
+        "Phase 12's 9-fold CV then showed a consistent morphology and timing cost, so the user reverted the final model to hidden 128 while fold 10 was still sealed.",
+    ],
+    [
+        "The grid shows the central tension of the study in miniature: every change that makes the model less MAE-optimal (smaller, slower learning rate, spectral term) produces sharper, better-timed beats.",
+        "Stage A is single-seed and descriptive; only the shortlisted candidate was tested with the full statistics.",
+    ],
+    [
+        "Selection criterion and its alternative are both pre-registered in spirit: MAE is primary, gatekeepers must not be worse (D6.2).",
+        "Stage A timings: hidden 256 took 88 min vs 45 min for base on CPU.",
+    ],
+    [
+        (
+            "Isn't the hidden-size reversal a form of test-set peeking?",
+            "No: it used only folds 1–9 (cross-validation). Fold 10 was opened afterwards, once.",
+        ),
+        (
+            "Why not adopt spectral λ 0.3?",
+            "It fails the MAE-primary rule (+3.6 µV on the holdout). It is listed as future work in combination with the gate.",
+        ),
+    ],
+)
+
+# =============================================================== 19 Reliability
 s = slide(
     "Statistical reliability",
     "Training randomness decides sub-µV verdicts → 6 runs per arm, run-and-patient bootstrap",
@@ -883,7 +1021,64 @@ notes(
     ],
 )
 
-# =============================================================== 18 Error analysis
+# =============================================================== 20 Robustness
+s = slide(
+    "RQ7 · Robustness",
+    "Stable across folds, devices, quality strata and noise; it breaks for AF/flutter and a missing lead II",
+    "Source: Phase 12 report — strata: OOF folds 1–9, 3-seed ensembles, patient-cluster bootstrap; perturbations: fold 9, 6 models. Analysed the hidden-256 variant (≈ 1 µV MAE from final)",
+)
+s.table(0.45, 1.65, [2.6, 1.05, 1.05, 1.05, 1.05, 1.05, 1.3], [
+    ["Stratum (patients)", "Final MAE", "L1 MAE", "sn4 MAE", "Final timing", "sn4 timing", "Beats flat / L1 / sn4"],
+    ["AT-6 device (6,579)", "0.0923", "0.0958", "0.1343", "106", "82", "✓ / ✓ / ✗"],
+    ["CS100 device (4,712)", "0.0796", "0.0825", "0.0969", "116", "93", "✓ / ✓ / ✗"],
+    ["High baseline wander (6,177)", "0.1008", "0.1047", "0.1478", "116", "91", "✓ / ✓ / ✗"],
+    ["Sinus rhythm (13,517)", "0.0800", "0.0816", "0.1119", "106", "80", "✓ / ✓ / ✗"],
+    ["AF / flutter (1,143)", "0.1141", "0.1141", "0.1575", "197", "161", "✓ / ✗ / ✗"],
+    ["Paced (206)", "0.1205", "0.1680", "0.1355", "102", "93", "✓ / ✓ / ✗"],
+    ["HR > 100 bpm (1,379)", "0.1126", "0.1227", "0.1433", "96", "81", "✓ / ✓ / ✗"],
+], size=11, row_h=0.42, highlight=(5,))  # fmt: skip
+s.table(0.45, 5.15, [2.6, 1.3, 1.3, 1.3, 1.3], [
+    ["History perturbation", "MAE", "Template", "Timing", "Beats flat"],
+    ["clean / noise σ 0.05 mV", "0.0882 / 0.0889", "0.093 / 0.094", "126 / 128", "✓"],
+    ["lead II set to 0", "0.0892", "0.118", "262", "✗ (template)"],
+], size=11, row_h=0.4, highlight=(2,))  # fmt: skip
+s.text(9.95, 1.6, 3.0, 5.3, [
+    "**Folds:** OOF MAE 0.0840 mV, fold SD 0.0009; beats flat and L1 in 9/9 folds",
+    "**H12.1** beats flat in every stratum ✓",
+    "**H12.2** beats L1 in every stratum ✗ (AF/flutter: tie)",
+    "**H12.3** AF timing ≤ sn4 ✗ (+36 ms)",
+    "**H12.4** beats flat under every perturbation ✗ (lead II)",
+    "Largest gains over L1: paced −47.5 µV, HR > 100 −10.0 µV",
+], size=12)  # fmt: skip
+notes(
+    s,
+    "Show where the final model holds and where it breaks, using the pre-registered robustness hypotheses.",
+    [
+        "Across folds the result is very stable (fold SD below 1 µV) and the model beats flat in every stratum, including every device and quality group.",
+        "AF/flutter is the one stratum with no gain over L1: sn4 copies regular beats into an irregular rhythm, so the gate has little to trust, and timing is worse than sn4 itself.",
+        "Gaussian noise in the history barely matters (+0.7 µV MAE at 0.05 mV). Zeroing lead II removes most timing skill, because lead II drives both sn4's period search and the metric's beat detection.",
+    ],
+    [
+        "The largest gains are in regular, fast or paced rhythms where sn4 is informative — the mirror image of the AF failure.",
+        "The lead-II result is partly a measurement artefact (the timing metric detects beats on lead II) and partly real (sn4 depends on lead II peaks).",
+    ],
+    [
+        "Phase 12 also produced the 9-fold CV evidence that reversed the hidden-size choice (slide 18).",
+        "Strata use one OOF ensemble per record; rhythm labels are PTB-XL statements, not adjudicated; perturbations are synthetic.",
+    ],
+    [
+        (
+            "Why does the device effect disappear here when it drove difficulty in Phase 2?",
+            "Devices differ in absolute difficulty (the MAE column), but the model's advantage over flat and L1 holds within every device; Phase 14 shows the device effect vanishes after adjusting for patient factors.",
+        ),
+        (
+            "Would a different lead for sn4 fix the lead-II failure?",
+            "Likely partly; a multi-lead or lead-robust period estimate is a cheap follow-up, not tested here.",
+        ),
+    ],
+)
+
+# =============================================================== 21 Error analysis
 s = slide(
     "Error analysis",
     "Errors concentrate in irregular rhythms, pacing, hypertrophy and baseline wander",
@@ -908,7 +1103,7 @@ notes(
         "AF/flutter is the main subgroup where the final model gives no benefit over L1 (ΔMAE +0.0 µV) and its timing is worse than sn4 (197 vs 161 ms).",
     ],
     [
-        "Typical failure in AF: forecast beats copied from sn4 at regular intervals while true beats are irregular; or, with the gate closed, a flat slow-wave forecast (example on slide 20).",
+        "Typical failure in AF: forecast beats copied from sn4 at regular intervals while true beats are irregular; or, with the gate closed, a flat slow-wave forecast (example on slide 23).",
         "Paced rhythms benefit most from the gate (−47.5 µV vs L1): pacing makes the rhythm highly regular.",
     ],
     [
@@ -923,7 +1118,7 @@ notes(
     ],
 )
 
-# =============================================================== 19 Lead-level
+# =============================================================== 22 Lead-level
 s = slide(
     "Lead-level analysis",
     "Errors scale with lead amplitude: aVL easiest, V2–V3 hardest; the final model is best on every lead",
@@ -961,7 +1156,7 @@ notes(
     ],
 )
 
-# =============================================================== 20 Plausibility
+# =============================================================== 23 Plausibility
 s = slide(
     "Physiological plausibility",
     "Right number of beats in roughly the right places — but damped, and limb-lead relations break",
@@ -1000,7 +1195,7 @@ notes(
     [
         (
             "Is 28% amplitude acceptable?",
-            "Not for clinical use; it is the L1-optimal hedge under timing uncertainty. Removing the gate restores amplitude but costs 16 µV MAE (slide 21).",
+            "Not for clinical use; it is the L1-optimal hedge under timing uncertainty. Removing the gate restores amplitude but costs 16 µV MAE (slide 25).",
         ),
         (
             "How would you fix lead consistency?",
@@ -1009,7 +1204,7 @@ notes(
     ],
 )
 
-# =============================================================== 21 Explainability
+# =============================================================== 24 Explainability
 s = slide(
     "Explainability",
     "The model learned when to trust the repeated beats — and relies on the last second of history",
@@ -1020,7 +1215,7 @@ s.image(FIG / "explain_saliency.png", 0.45, 4.15, 6.4, 2.2)
 s.text(7.05, 4.1, 5.9, 2.9, [
     "**Saliency:** 70% within the last 1 s of history; at QRS (±50 ms) only half the level elsewhere → slow waves drive the network",
     "**Gate:** mean 0.26; 0.36 → 0.16 across the horizon; tracks periodicity (ρ = 0.47)",
-    "**Ablations:** no gate → +16 µV MAE (full sn4 beats); sn4 as input only → timing 264 ms (= no sn4)",
+    "**Ablations:** no gate → +16 µV MAE (full sn4 beats); sn4 as input only → timing 264 ms (= no sn4) — slide 25",
     "SHAP not computed (8,400-dim input); attention N/A (final model has none)",
 ], size=12.5)  # fmt: skip
 notes(
@@ -1050,7 +1245,57 @@ notes(
     ],
 )
 
-# =============================================================== 22 Compute
+# =============================================================== 25 Ablations
+s = slide(
+    "RQ7 · Ablations",
+    "The sn4 skip path carries the timing skill; the gate trades beat shape for MAE",
+    "Source: Phase 18 report — fold 9, 6 seeds per arm, compare_runs (ablation − final, 95% CI). Analysed the hidden-256 variant; ensemble MAE",
+)
+s.table(0.45, 1.65, [3.4, 1.15, 2.1, 1.1, 1.15, 1.1, 1.0, 1.4], [
+    ["Arm", "MAE", "ΔMAE vs final (µV)", "DTW", "Template", "Timing", "≤ 50 ms", "Beats final?"],
+    ["final (gate + sn4 skip + correction)", "0.0851", "–", "0.0694", "0.0934", "126", "30%", "–"],
+    ["no gate (sn4 + correction)", "0.1017", "+16.1 [+14.6, +17.8]", "0.0610", "0.0643", "89", "43%", "✗ (MAE)"],
+    ["sn4 as input only (no skip)", "0.0893", "+4.8 [+3.8, +5.9]", "0.0788", "0.1290", "264", "0.3%", "✗"],
+    ["no sn4 (L1 CNN-LSTM)", "0.0874", "+2.9 [+2.0, +3.9]", "0.0781", "0.1288", "267", "0.4%", "✗"],
+    ["raw input (no 0.67 Hz decomposition)", "0.0841", "−1.1 [−1.8, −0.5]", "0.0684", "0.0915", "120", "31%", "✓"],
+    ["sn4 alone (no network)", "0.1220*", "+33.8 [+32.1, +35.5]", "0.0799", "0.0642", "89", "43%", "–"],
+], size=11, row_h=0.43, highlight=(5,))  # fmt: skip
+s.text(0.45, 4.8, 12.4, 1.4, [
+    "**Skip path essential:** given sn4 only as an input channel, the network ignores it (timing 264 ms ≈ no sn4)",
+    "**Gate = amplitude hedge:** without it, beats keep full amplitude (template and timing = sn4, best DTW) but MAE is 16 µV worse",
+    "**Input decomposition:** raw input was better on fold 9 (not CV-confirmed); the frozen model kept the decomposition (D18.1)",
+], size=12.5)  # fmt: skip
+s.text(0.45, 6.3, 12.4, 0.35, ["MAE in mV (6-run ensemble; *single forecast), template in mV, timing in ms; lower is better."],
+       size=10.5, color=GREY, bullet=False)  # fmt: skip
+notes(
+    s,
+    "Give the causal evidence for which parts of the final model matter.",
+    [
+        "Each arm removes one component and is compared with the full model on the same fold-9 patients with 6 runs per arm.",
+        "Removing the skip path (sn4 as an extra input only) or removing sn4 altogether gives the same result: timing around 265 ms. The timing skill comes entirely from passing sn4 through to the output.",
+        "Removing the gate (sn4 + correction) gives the best shape and timing of any learned arm, at a 16 µV MAE cost: the gate's job is to damp beats when their timing is uncertain, which is what L1 rewards.",
+    ],
+    [
+        "The 'no gate' arm is a legitimate alternative final model if morphology matters more than MAE — it is still 18 µV better than sn4 alone on MAE.",
+        "Raw input beating the decomposition contradicts D5.11, which was decided on the reference CNN; it is a single-fold result and was not acted on before the test.",
+    ],
+    [
+        "Phase 18 analysed the hidden-256 configuration (2.68 M parameters); the mechanism is identical in the hidden-128 final model.",
+        "Capacity is not the explanation: 'sn4 as input only' has more parameters than the L1 CNN-LSTM but no timing gain.",
+    ],
+    [
+        (
+            "Why not switch to raw input after this result?",
+            "It was a single-fold comparison found after the configuration was pre-specified; switching would have needed CV confirmation. It is listed as follow-up work.",
+        ),
+        (
+            "Which ablation would you show a sceptic first?",
+            "'sn4 as input only': it rules out the explanation that the model simply has access to more information.",
+        ),
+    ],
+)
+
+# =============================================================== 26 Compute
 s = slide(
     "Compute efficiency",
     "The final model trains faster than three of four families; inference cost is dominated by computing sn4",
@@ -1091,7 +1336,7 @@ notes(
     ],
 )
 
-# =============================================================== 23 Test
+# =============================================================== 27 Test
 s = slide(
     "Held-out test (fold 10, run once)",
     "The frozen final model reproduced its cross-validation result on 1,904 unseen patients",
@@ -1131,11 +1376,11 @@ notes(
     ],
 )
 
-# =============================================================== 24 Final comparison
+# =============================================================== 28 Final comparison
 s = slide(
     "Final model comparison",
     "Only the sn4-gated CNN-LSTM is better than the L1 models on every criterion; sn4 still owns morphology",
-    "Accuracy/shape/timing: fold 9 single-model mean of 6 seeds (comparable across all rows). Generalisation: 9-fold CV MAE / fold 10. Costs: slide 22",
+    "Accuracy/shape/timing: fold 9 single-model mean of 6 seeds (comparable across all rows). Generalisation: 9-fold CV MAE / fold 10. Costs: slide 26",
 )
 s.table(0.45, 1.7, [2.75, 1.05, 1.15, 1.0, 1.95, 1.2, 1.25, 1.05], [
     ["Model", "MAE", "Template", "Timing", "CV MAE / fold 10", "Train min", "Infer ms/rec", "Params"],
@@ -1179,7 +1424,7 @@ notes(
     ],
 )
 
-# =============================================================== 25 Decisions
+# =============================================================== 29 Decisions
 s = slide(
     "Key research decisions",
     "Twelve decisions determined the outcome; each is logged with alternatives and evidence",
@@ -1224,7 +1469,7 @@ notes(
     ],
 )
 
-# =============================================================== 26 Conclusions
+# =============================================================== 30 Conclusions
 s = slide(
     "Conclusions",
     "The objective, not data, preprocessing or architecture, was the bottleneck — gating repeated beats unlocks it",
@@ -1264,7 +1509,52 @@ notes(
     ],
 )
 
-# =============================================================== 27 Future work
+# =============================================================== 31 Limitations
+s = slide(
+    "Limitations and threats to validity",
+    "What the evidence does not show — and how each threat was contained",
+    "Sources: FINAL_REPORT.md §6 and §8; Phases 9, 10, 12, 16, 17 reports; README (reproducibility)",
+)
+s.table(0.45, 1.65, [2.9, 5.4, 4.1], [
+    ["Threat", "Detail", "Containment / consequence"],
+    ["One held-out fold, one dataset", "Fold 10 opened once; no external cohort or other devices", "Fold 10 now used; new models need a new test set"],
+    ["Optimistic development numbers", "Selection on fold 9; only finalists cross-validated", "9-fold CV for finalists; fold 10 matched CV (0.0850)"],
+    ["Analysis model ≠ final model", "Phases 12–15 and 18 analysed hidden 256; final is hidden 128 (D12.1)", "≈ 1 µV MAE apart; same mechanism; hidden 128 CV'd in Phase 10"],
+    ["CPU-only compute", "PatchTST reduced; one configuration per family (lr only); objectives on CNN-LSTM only (D10.0)", "Family ranking conditional on these sizes"],
+    ["Detector-dependent metrics", "Timing/template use lead-II R-peaks (NeuroKit2); 100 Hz cannot resolve QRS duration or QT", "Lead II missing breaks timing (slide 20)"],
+    ["Approximate statistics", "CV p-values with overlapping training sets; no multiplicity correction; rhythm strata from PTB-XL statements", "Pre-registered comparisons; run + patient bootstrap CIs"],
+    ["Point forecasts, no clinical endpoint", "Damped beats (≈ 28% amplitude) are the L1 hedge", "Not a clinical tool; probabilistic forecasts as future work"],
+], size=10.5, row_h=0.52)  # fmt: skip
+key(s, 0.45, 5.95, 12.4, 0.85, "Reproducibility safeguards: locked uv environment, validated config + hash, provenance manifest per run, "
+    "bitwise reruns in every phase, SHA-256-frozen final models, 98 unit tests.", 12.5)  # fmt: skip
+notes(
+    s,
+    "State the limits of the conclusions before proposing future work, so that each future direction answers a named limitation.",
+    [
+        "The most important limitation is external validity: everything comes from PTB-XL, and only one held-out fold exists. Fold 10 cannot be reused for new model selection.",
+        "Several post-test analyses (robustness, error analysis, ablations) were run on the hidden-256 variant. This is disclosed on every affected slide; the two configurations differ by about 1 µV MAE and share the same mechanism.",
+    ],
+    [
+        "CPU-only compute shaped the study: it limited family sizes, hyperparameter search and the objective study to one family. Conclusions about architectures are conditional on those sizes.",
+        "The beat-based gatekeepers depend on R-peak detection in lead II. They were validated in Phase 6 against controlled probe forecasts, but they inherit detector errors and the 100 Hz resolution limit.",
+    ],
+    [
+        "Reproducibility: each run writes its resolved config, provenance (git commit, lockfile, packages, hardware, dataset fingerprint), metrics and log; reruns were bitwise identical on the same hardware and thread count, and one such check exposed the Phase 7 seeding defect.",
+        "Across machines, results are only statistically reproducible, which is why all verdicts rest on multiple seeds.",
+    ],
+    [
+        (
+            "How confident are you in the fold-10 number?",
+            "It is an unbiased single estimate for these patients (1,904) and matches the CV mean exactly; it does not tell us about other hospitals or devices.",
+        ),
+        (
+            "Which limitation would change the conclusion if removed?",
+            "Probably compute: full-size attention models with the gate, or soft-DTW objectives, could change the family ranking — but not the finding that the objective, not the input, was the bottleneck.",
+        ),
+    ],
+)
+
+# =============================================================== 32 Future work
 s = slide("Future work", "Five directions that follow directly from the evidence")
 s.table(0.45, 1.65, [4.0, 5.0, 3.4], [
     ["Direction", "Evidence that motivates it", "Expected benefit"],
