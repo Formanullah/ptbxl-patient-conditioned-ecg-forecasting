@@ -112,3 +112,13 @@ def test_gated_baseline_model_uses_packed_causal_baseline():
     assert np.allclose(predict(model, pipe, packed[:, :700]), base, atol=1e-6)
     with pytest.raises(ValueError):
         BaselineConditioned(Pipeline("decompose_0.67", leads8=True))
+
+
+def test_additive_ablation_adds_correction_to_baseline():
+    from ptbxl_forecast.models import GatedBaselineCNNLSTM
+
+    model = GatedBaselineCNNLSTM(24, horizon=290, additive=True, **SMALL["cnn_lstm"])
+    x = torch.randn(2, 700, 36)
+    with torch.no_grad():
+        model.body.head.weight.zero_(), model.body.head.bias.zero_()
+        assert torch.equal(model(x), x[:, -290:, 24:])
