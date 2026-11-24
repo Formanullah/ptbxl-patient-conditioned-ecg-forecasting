@@ -10,3 +10,13 @@ Written 2026-11-24 before any Phase 16 run.
   to `MANIFEST.json` with SHA-256 hashes. Phase 17 verifies the hashes before loading
   fold 10. No change to the models or the analysis is allowed after the freeze.
 - Fold 10 is not touched in this phase.
+
+## Amendment 1 (2026-11-24, before fold 10 was opened)
+
+User decision D12.1: the final model reverts to the **Phase 10 configuration (LSTM
+hidden 128, 0.67 Hz decomposition)**, because Phase 12's 9-fold CV found hidden 256
+worse on template MAE (+1.3 µV, p = 0.013) and beat timing (+5.2 ms, p = 0.002), and
+the multi-fold criterion (D8.6) favours hidden 128. D18.1: the decomposition is kept
+(raw input was better on fold 9 only, not CV-confirmed). The 6 final models are
+retrained with hidden 128 and re-frozen; the hidden-256 models are kept as superseded
+(`MANIFEST_superseded_hidden256.json`). The L1 reference is unchanged.

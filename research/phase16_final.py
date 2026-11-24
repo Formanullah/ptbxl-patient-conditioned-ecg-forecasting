@@ -24,15 +24,25 @@ OUT = Path("reports/phase16_final")
 CACHE = Path(".cache/data/phase16")
 SEEDS6 = p9.SEEDS6
 L1_CONFIG = {**p11.BASE, "model": "plain"}  # Phase 9 CNN-LSTM
+# D12.1 (user, 2026-11-24, before fold 10 was opened): the 9-fold CV of Phase 12 showed
+# hidden 256 (Phase 11 fold-9 choice) worse than hidden 128 on template MAE and timing,
+# so the final model reverts to the Phase 10 configuration (hidden 128). The hidden-256
+# models are kept as superseded (MANIFEST_superseded_hidden256.json).
+FINAL_CONFIG = dict(p11.BASE)
+
+
+def final_config() -> dict:
+    return FINAL_CONFIG
 
 
 def path(arm: str, s: int) -> Path:
-    return CACHE / f"{arm}_k10_s{s}.npz"
+    tag = "final128" if arm == "final" else arm
+    return CACHE / f"{tag}_k10_s{s}.npz"
 
 
 def specs() -> list[dict]:
     CACHE.mkdir(parents=True, exist_ok=True)
-    cfg = {"final": p11.final_config(), "l1": L1_CONFIG}
+    cfg = {"final": final_config(), "l1": L1_CONFIG}
     return [{"config": cfg[a], "k": 10, "s": s, "path": str(path(a, s)), "keep_model": True}
             for a in cfg for s in SEEDS6]  # fmt: skip
 
@@ -43,7 +53,7 @@ def sha(p: Path) -> str:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    cfg = {"final": p11.final_config(), "l1": L1_CONFIG}
+    cfg = {"final": final_config(), "l1": L1_CONFIG}
     commit = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True
     ).stdout.strip()
@@ -62,7 +72,8 @@ def main() -> None:
     manifest = {"frozen_at_commit": commit, "configs": cfg, "seeds": list(SEEDS6), "runs": runs,
                 "training_data": "cleaned folds 1-9 minus 20% internal patient holdout (seed 0)",
                 "prediction": "mean of the 6 seeds' forecasts (raw mV, 12 leads, 290 samples after 700)",
-                "sn4_source_sha256": sn4_code, "fold10_touched": False}  # fmt: skip
+                "sn4_source_sha256": sn4_code, "fold10_touched": False,
+                "decision": "D12.1: hidden 128 (Phase 10 configuration) replaces hidden 256"}  # fmt: skip
     json.dump(manifest, (OUT / "MANIFEST.json").open("w"), indent=2, default=float)
     caps = sum(r["epochs_run"] == 100 for a in runs for r in runs[a])
     print(

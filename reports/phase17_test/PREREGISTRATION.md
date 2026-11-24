@@ -22,3 +22,10 @@ runs; D6.2 decision rule. 6-run ensemble results reported alongside.
 Final beats flat and L1; it does not beat `sn4` (template MAE and beat timing worse).
 Fold 9 MAE was the highest of folds 1–9; fold 10 may differ (device mix). Whatever the
 outcome, it is reported unchanged; nothing is re-tuned afterwards.
+
+## Amendment 1 (2026-11-24, before fold 10 was opened)
+
+The final model is the hidden-128 `sn4`-gated CNN-LSTM (D12.1). User approval to run
+the one-time test given on 2026-11-24. Expectations from 9-fold CV of this
+configuration: MAE ≈ 0.085 mV, template ≈ 0.088 mV, timing ≈ 109 ms; beats flat and
+L1; does not beat `sn4` on template MAE or timing.
