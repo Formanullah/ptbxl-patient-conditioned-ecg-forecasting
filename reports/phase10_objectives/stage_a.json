@@ -1,0 +1,10 @@
+{
+  "lam": {
+    "derivative": 0.3,
+    "spectral": 0.3,
+    "sn4_gated": 0.0
+  },
+  "l1_rerun_bitwise_identical": true,
+  "minutes": 172.00826209528216,
+  "l1_holdout_mae": 0.08874272810662
+}

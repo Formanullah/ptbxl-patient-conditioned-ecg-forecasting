@@ -1,0 +1,19 @@
+{
+  "minutes": 75.48026144589919,
+  "eligible_beats_flat": [
+    "spectral",
+    "sn4_gated"
+  ],
+  "finalists": [
+    "sn4_gated",
+    "spectral"
+  ],
+  "template_better_than_l1": [
+    "spectral",
+    "sn4_gated"
+  ],
+  "beats_l1": [
+    "sn4_gated"
+  ],
+  "beats_sn4": []
+}

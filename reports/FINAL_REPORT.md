@@ -296,6 +296,16 @@ data, preprocessing or capacity.
 | 14–15 Error analysis | By rhythm, diagnosis, age, sex, device; per lead |
 | 16–19 | Final model, one-time fold-10 test evaluation, ablations (incl. the adopted input transform), documentation |
 
+### Addendum (2026-11-24): Phase 10 completed
+
+Phase 10 ran on CNN-LSTM only (D10.0). Conditioning CNN-LSTM on the `sn4` forecast
+through a learned per-step, per-lead gate is the first learned model that beats flat and
+the L1 CNN-LSTM on MAE and every gatekeeper (9-fold CV, 9/9 folds: MAE 0.0850 vs
+0.0866 mV, template MAE 0.088 vs 0.131 mV, beat timing 109 vs 270 ms). It still does not
+beat `sn4` on template MAE or beat timing. A spectral loss term improves shape and
+timing but costs MAE; a derivative term has no useful effect. Details:
+[Phase 10 report](phase10_objectives/REPORT.md). No fold-10 result exists.
+
 ## 9. Reproducing this report
 
 ```sh

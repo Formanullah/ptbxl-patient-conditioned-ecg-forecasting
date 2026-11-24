@@ -1,0 +1,47 @@
+{
+  "minutes": 303.00587671309864,
+  "finalists": [
+    "sn4_gated",
+    "spectral"
+  ],
+  "cv_mean": {
+    "flat": {
+      "mae": 0.10965158825828632,
+      "dtw_mae": 0.10965158835760218,
+      "template_mae": 0.10489846047224488,
+      "beat_timing_ms": 299.27121547431113
+    },
+    "l1": {
+      "mae": 0.0865762281264771,
+      "dtw_mae": 0.07565413251770499,
+      "template_mae": 0.13100276201596084,
+      "beat_timing_ms": 270.029024658784
+    },
+    "sn4": {
+      "mae": 0.11666734552583684,
+      "dtw_mae": 0.07350181688269418,
+      "template_mae": 0.06475641820892887,
+      "beat_timing_ms": 88.26570066241135
+    },
+    "sn4_gated": {
+      "mae": 0.08498817427020008,
+      "dtw_mae": 0.06763978907528603,
+      "template_mae": 0.08811094084199153,
+      "beat_timing_ms": 108.8165591161048
+    },
+    "spectral": {
+      "mae": 0.08725598497868647,
+      "dtw_mae": 0.07028627231364772,
+      "template_mae": 0.09167743269259537,
+      "beat_timing_ms": 118.20304831167648
+    }
+  },
+  "confirmed_beats_flat": [
+    "sn4_gated",
+    "spectral"
+  ],
+  "confirmed_beats_l1": [
+    "sn4_gated"
+  ],
+  "confirmed_beats_sn4": []
+}

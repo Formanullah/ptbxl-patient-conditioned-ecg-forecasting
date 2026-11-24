@@ -1,0 +1,7 @@
+arm,vs,mean_d_mae,p_mae,folds_better_mae,mean_d_dtw_mae,p_dtw_mae,folds_better_dtw_mae,mean_d_template_mae,p_template_mae,folds_better_template_mae,mean_d_beat_timing_ms,p_beat_timing_ms,folds_better_beat_timing_ms,beats
+sn4_gated,flat,-0.024663,1.7866e-10,9,-0.042012,1.6524e-12,9,-0.016788,2.0624e-09,9,-190.45,1.7936e-14,9,True
+sn4_gated,sn4,-0.031679,2.1332e-11,9,-0.005862,1.5346e-05,9,0.023355,3.2439e-10,0,20.551,1.5819e-07,0,False
+sn4_gated,l1,-0.0015881,9.7884e-06,9,-0.0080143,7.5299e-09,9,-0.042892,2.9078e-11,9,-161.21,5.415e-14,9,True
+spectral,flat,-0.022396,2.3812e-10,9,-0.039365,3.8457e-12,9,-0.013221,5.6165e-09,9,-181.07,7.2315e-13,9,True
+spectral,sn4,-0.029411,2.4468e-11,9,-0.0032155,0.0011125,9,0.026921,1.6665e-11,0,29.937,2.3617e-06,0,False
+spectral,l1,0.00067976,0.00094879,0,-0.0053679,1.1607e-08,9,-0.039325,4.6326e-12,9,-151.83,2.0601e-12,9,False
