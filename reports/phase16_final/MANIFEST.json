@@ -1,0 +1,200 @@
+{
+  "frozen_at_commit": "38e63a485337d6aa2177978897699204a1e348c6",
+  "configs": {
+    "final": {
+      "model": "gated",
+      "width": 64,
+      "hidden": 128,
+      "layers": 2,
+      "lr": 0.001,
+      "batch": 64,
+      "aux": "l1",
+      "lam": 0.0
+    },
+    "l1": {
+      "model": "plain",
+      "width": 64,
+      "hidden": 128,
+      "layers": 2,
+      "lr": 0.001,
+      "batch": 64,
+      "aux": "l1",
+      "lam": 0.0
+    }
+  },
+  "seeds": [
+    42,
+    123,
+    999,
+    7,
+    2024,
+    31337
+  ],
+  "runs": {
+    "final": [
+      {
+        "seed": 42,
+        "weights": ".cache/data/phase16/final128_k10_s42.pt",
+        "sha256_weights": "c491db97d9e9d1cb75041daaa235c78adb68f8a7440b5cc3443d6138d5336f96",
+        "pipeline": ".cache/data/phase16/final128_k10_s42.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 52,
+        "epochs_run": 57,
+        "best_holdout_l1": 0.08633240312337875,
+        "minutes": 38.89941099674907,
+        "n_train_records": 15592,
+        "params": 1168816
+      },
+      {
+        "seed": 123,
+        "weights": ".cache/data/phase16/final128_k10_s123.pt",
+        "sha256_weights": "6c9c77535a1473ef2d66fe1fce4be890f6a6a2d34e3229e4142fe40dd8caa108",
+        "pipeline": ".cache/data/phase16/final128_k10_s123.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 52,
+        "epochs_run": 57,
+        "best_holdout_l1": 0.08677781280130148,
+        "minutes": 39.89840182274735,
+        "n_train_records": 15592,
+        "params": 1168816
+      },
+      {
+        "seed": 999,
+        "weights": ".cache/data/phase16/final128_k10_s999.pt",
+        "sha256_weights": "2f9506f2fbe442cbd80624f70f15255198c2a5e25d32d89a35788e3b14f75af2",
+        "pipeline": ".cache/data/phase16/final128_k10_s999.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 49,
+        "epochs_run": 54,
+        "best_holdout_l1": 0.0869684973731637,
+        "minutes": 36.927724284500194,
+        "n_train_records": 15592,
+        "params": 1168816
+      },
+      {
+        "seed": 7,
+        "weights": ".cache/data/phase16/final128_k10_s7.pt",
+        "sha256_weights": "546f21d747c75d329bc64e7b7180e69f2404f2cb86fc5b3b44d55f49ecc8a911",
+        "pipeline": ".cache/data/phase16/final128_k10_s7.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 50,
+        "epochs_run": 55,
+        "best_holdout_l1": 0.0869083246216178,
+        "minutes": 37.83516715868221,
+        "n_train_records": 15592,
+        "params": 1168816
+      },
+      {
+        "seed": 2024,
+        "weights": ".cache/data/phase16/final128_k10_s2024.pt",
+        "sha256_weights": "78c6ef8633f12ed7bda6340045aff216dba8236fc2667ac297420536ed736aad",
+        "pipeline": ".cache/data/phase16/final128_k10_s2024.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 40,
+        "epochs_run": 45,
+        "best_holdout_l1": 0.08667799271643162,
+        "minutes": 35.55638175183752,
+        "n_train_records": 15592,
+        "params": 1168816
+      },
+      {
+        "seed": 31337,
+        "weights": ".cache/data/phase16/final128_k10_s31337.pt",
+        "sha256_weights": "995f218c1a5b3f6f1fd8e1e3e8822861e7eff7c119f797057d9561a1a8fb4900",
+        "pipeline": ".cache/data/phase16/final128_k10_s31337.pipe.pkl",
+        "sha256_pipeline": "b960622429ed788d08d9556b00a88ec8870cd8101518b170286b5552a1be67af",
+        "best_epoch": 39,
+        "epochs_run": 44,
+        "best_holdout_l1": 0.08678646292537451,
+        "minutes": 27.729344128196438,
+        "n_train_records": 15592,
+        "params": 1168816
+      }
+    ],
+    "l1": [
+      {
+        "seed": 42,
+        "weights": ".cache/data/phase16/l1_k10_s42.pt",
+        "sha256_weights": "68a0a38582ec66dd62dff95021b0e3cdb02cd6b74174470e1f9aed2076ecd238",
+        "pipeline": ".cache/data/phase16/l1_k10_s42.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 80,
+        "epochs_run": 85,
+        "best_holdout_l1": 0.08828712161630392,
+        "minutes": 79.10673363893292,
+        "n_train_records": 15592,
+        "params": 719896
+      },
+      {
+        "seed": 123,
+        "weights": ".cache/data/phase16/l1_k10_s123.pt",
+        "sha256_weights": "ef5267723f5d6e38f318e1ad94bd814152e7a8b63bf2d8978e5ea2390b83ad24",
+        "pipeline": ".cache/data/phase16/l1_k10_s123.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 72,
+        "epochs_run": 77,
+        "best_holdout_l1": 0.08899446111172438,
+        "minutes": 63.80602169247965,
+        "n_train_records": 15592,
+        "params": 719896
+      },
+      {
+        "seed": 999,
+        "weights": ".cache/data/phase16/l1_k10_s999.pt",
+        "sha256_weights": "5c73d3542344941b3a3102420b296576fb0540d77e71fce51306d9e980ff6c97",
+        "pipeline": ".cache/data/phase16/l1_k10_s999.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 82,
+        "epochs_run": 87,
+        "best_holdout_l1": 0.0884062247350812,
+        "minutes": 66.78056080885386,
+        "n_train_records": 15592,
+        "params": 719896
+      },
+      {
+        "seed": 7,
+        "weights": ".cache/data/phase16/l1_k10_s7.pt",
+        "sha256_weights": "64765a883d0268063953c10fc59b1f78a47bb9215cd2637a02318e74c4f990fe",
+        "pipeline": ".cache/data/phase16/l1_k10_s7.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 73,
+        "epochs_run": 78,
+        "best_holdout_l1": 0.08884999807924032,
+        "minutes": 69.72386314837107,
+        "n_train_records": 15592,
+        "params": 719896
+      },
+      {
+        "seed": 2024,
+        "weights": ".cache/data/phase16/l1_k10_s2024.pt",
+        "sha256_weights": "94a66d4c493c813a23d71e617945b02ebfe1fbbb5702ed77b262d39a70e1af12",
+        "pipeline": ".cache/data/phase16/l1_k10_s2024.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 71,
+        "epochs_run": 76,
+        "best_holdout_l1": 0.08901362679898739,
+        "minutes": 59.191705750332524,
+        "n_train_records": 15592,
+        "params": 719896
+      },
+      {
+        "seed": 31337,
+        "weights": ".cache/data/phase16/l1_k10_s31337.pt",
+        "sha256_weights": "d5552a20da76c0ffb9117ba751f5746d2e9ed3b621f8eaa0cdd9a5b0f7b59d6d",
+        "pipeline": ".cache/data/phase16/l1_k10_s31337.pipe.pkl",
+        "sha256_pipeline": "733e0abe0801cd2556e14b414195b5b96fab4d314a23d85b462342fe492a01e0",
+        "best_epoch": 84,
+        "epochs_run": 89,
+        "best_holdout_l1": 0.08891121298074722,
+        "minutes": 65.13898928934553,
+        "n_train_records": 15592,
+        "params": 719896
+      }
+    ]
+  },
+  "training_data": "cleaned folds 1-9 minus 20% internal patient holdout (seed 0)",
+  "prediction": "mean of the 6 seeds' forecasts (raw mV, 12 leads, 290 samples after 700)",
+  "sn4_source_sha256": "ef4a48bf8f1d2c13c1053f1b6b2ebf4a69edfdd657d5e88ec19527e8a579ac3a",
+  "fold10_touched": false,
+  "decision": "D12.1: hidden 128 (Phase 10 configuration) replaces hidden 256"
+}
