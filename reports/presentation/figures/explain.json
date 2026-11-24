@@ -1,0 +1,9 @@
+{
+  "records": 400,
+  "models": "6 fold-9 models (hidden 256), trained on folds 1-8",
+  "share_resid_saliency_last_1s": 0.7005252838134766,
+  "share_saliency_baseline_vs_residual": 0.4772140085697174,
+  "qrs_vs_rest_saliency_ratio_median": 0.5077149271965027,
+  "mean_abs_gated_sn4_mV": 0.028400469571352005,
+  "mean_abs_correction_mV": 0.04529077559709549
+}

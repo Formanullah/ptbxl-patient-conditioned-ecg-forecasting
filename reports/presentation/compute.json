@@ -1,0 +1,50 @@
+[
+  {
+    "model": "cnn",
+    "params": 1853528,
+    "train_step_s_batch64": 0.030501825734972954,
+    "peak_rss_train_MB": 418.8359375,
+    "rss_increase_train_MB": 189.8671875,
+    "inference_ms_per_record": 0.1284803320231731
+  },
+  {
+    "model": "lstm",
+    "params": 249240,
+    "train_step_s_batch64": 0.23215690907090902,
+    "peak_rss_train_MB": 531.5,
+    "rss_increase_train_MB": 308.6875,
+    "inference_ms_per_record": 0.37138201423658757
+  },
+  {
+    "model": "cnn_lstm",
+    "params": 719896,
+    "train_step_s_batch64": 1.0199479912407696,
+    "peak_rss_train_MB": 538.35546875,
+    "rss_increase_train_MB": 313.3828125,
+    "inference_ms_per_record": 0.49382009971547325
+  },
+  {
+    "model": "patchtst",
+    "params": 740322,
+    "train_step_s_batch64": 0.39921865798532963,
+    "peak_rss_train_MB": 936.61328125,
+    "rss_increase_train_MB": 709.44921875,
+    "inference_ms_per_record": 0.6841570299608671
+  },
+  {
+    "model": "transformer",
+    "params": 1183480,
+    "train_step_s_batch64": 0.373288766015321,
+    "peak_rss_train_MB": 828.58203125,
+    "rss_increase_train_MB": 597.94921875,
+    "inference_ms_per_record": 0.6082052168494556
+  },
+  {
+    "model": "sn4_gated",
+    "params": 1168816,
+    "train_step_s_batch64": 0.9202106921002269,
+    "peak_rss_train_MB": 548.24609375,
+    "rss_increase_train_MB": 321.1015625,
+    "inference_ms_per_record": 0.5160460092762756
+  }
+]
