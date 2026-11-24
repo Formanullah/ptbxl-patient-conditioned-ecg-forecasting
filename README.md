@@ -7,7 +7,7 @@ Records with signal defects are excluded by fixed rules (D3.1). The project is b
 phase by phase. Each phase ends with a report and a recorded go/no-go decision in the
 [decision log](reports/DECISION_LOG.md).
 
-**Consolidated report (Phases 0–9): [reports/FINAL_REPORT.md](reports/FINAL_REPORT.md).**
+**Consolidated report (Phases 0–18): [reports/FINAL_REPORT.md](reports/FINAL_REPORT.md).**
 
 | Phase | Status | Report |
 |---|---|---|
@@ -24,7 +24,14 @@ phase by phase. Each phase ends with a report and a recorded go/no-go decision i
 | 9 Model development | Done: CNN-LSTM best on MAE/DTW (−7.9% vs CNN, 9-fold CV) but worse beat morphology; no family beats `sn4`; CNN-LSTM + Transformer carried to Phase 10 | [report](reports/phase9_models/REPORT.md) |
 | 10 Training objectives | Done: CNN-LSTM conditioned on the `sn4` forecast beats flat and L1 CNN-LSTM on MAE and every gatekeeper (9-fold CV, 9/9 folds); still worse than `sn4` on morphology and timing; spectral loss helps shape but costs MAE; derivative loss no effect | [report](reports/phase10_objectives/REPORT.md) |
 | 11 Hyperparameters | Done: LSTM hidden 256 adopted (−0.77 µV MAE on fold 9, gatekeepers n.s.); spectral term trades MAE for morphology | [report](reports/phase11_tuning/REPORT.md) |
-| 12–18 | Running | pre-registrations in `reports/phase1*/` |
+| 12 Robustness | Done: beats flat in every stratum and L1 in all but AF/flutter; CV shows hidden 256 costs template/timing vs 128 (D12.1, pending) | [report](reports/phase12_robustness/REPORT.md) |
+| 13 Physiological plausibility | Done: correct beat count but damped (≈ 28% amplitude); limb-lead relations broken in 19% of records | [report](reports/phase13_plausibility/REPORT.md) |
+| 14 Error analysis: patients | Done: AF/flutter, hypertrophy, pacing and baseline wander drive error; device effect vanishes after adjustment | [report](reports/phase14_patient_errors/REPORT.md) |
+| 15 Error analysis: signals | Done: gain over L1 only for periodic histories; gate tracks periodicity | [report](reports/phase15_signal_errors/REPORT.md) |
+| 16 Final model | Done: frozen with hashes (pending D12.1/D18.1) | [report](reports/phase16_final/REPORT.md) |
+| 17 Test on fold 10 | **Not run** (awaiting user approval); pre-registered, dry-run checked | [pre-registration](reports/phase17_test/PREREGISTRATION.md) |
+| 18 Ablations | Done: skip path essential; gate trades shape for MAE; raw input beats the decomposition (D18.1, pending) | [report](reports/phase18_ablations/REPORT.md) |
+| 19 Documentation | Done for Phases 0–18 | [consolidated report](reports/FINAL_REPORT.md) |
 
 ## Setup (Windows, Linux, macOS; no admin rights needed)
 

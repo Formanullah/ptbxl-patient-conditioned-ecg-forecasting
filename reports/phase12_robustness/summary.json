@@ -1,0 +1,22 @@
+{
+  "H12_1_beats_flat_all_strata": true,
+  "H12_2_beats_l1_all_strata": false,
+  "strata_not_beating_flat": [],
+  "strata_not_beating_l1": [
+    [
+      "rhythm",
+      "AF/flutter"
+    ]
+  ],
+  "strata_beating_sn4": [],
+  "perturb_beats_flat": {
+    "clean": true,
+    "noise 0.02 mV": true,
+    "noise 0.05 mV": true,
+    "lead II missing": false
+  },
+  "saved_models_bitwise_equal": true,
+  "fold_sd_final_mae": 0.0008528499541598648,
+  "H12_3_af_timing_not_worse_than_sn4": false,
+  "af_timing_final_minus_sn4_ms": 35.84848994570123
+}

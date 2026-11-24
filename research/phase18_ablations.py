@@ -73,13 +73,16 @@ def main() -> None:
     )
     t, comps = pd.DataFrame(rows), pd.DataFrame(cmps)
     beating = comps.iloc[:-1][comps.iloc[:-1].beats.astype(bool)].ablation.tolist()
-    # the sn4-alone row is final - sn4; flip its sign so every row reads ablation - final
+    # the sn4-alone row is final - sn4; negate (and swap the CI bounds) so it reads sn4 - final
     last = comps.index[-1]
-    for col in [c_ for c_ in comps if c_.startswith("d_")]:
-        comps.loc[last, col] = -comps.loc[last, col]
     for m in SUITE:
-        lo, hi = f"d_{m}_lo", f"d_{m}_hi"
-        comps.loc[last, [lo, hi]] = comps.loc[last, [hi, lo]].to_numpy()
+        d, lo, hi = (comps.at[last, f"d_{m}{x}"] for x in ("", "_lo", "_hi"))
+        comps.at[last, f"d_{m}"], comps.at[last, f"d_{m}_lo"], comps.at[last, f"d_{m}_hi"] = (
+            -d,
+            -hi,
+            -lo,
+        )
+    comps["beats"] = comps.beats.astype(object)
     comps.loc[last, "beats"] = None
     t.to_csv(OUT / "table_ablations.csv", index=False, float_format="%.6g")
     comps.to_csv(OUT / "table_ablation_deltas.csv", index=False, float_format="%.5g")

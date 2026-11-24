@@ -1,0 +1,8 @@
+{
+  "H18_1_no_gate_worse_mae": true,
+  "H18_2_input_only_worse_timing": true,
+  "H18_3_raw_input_mae_ns": false,
+  "ablations_beating_final": [
+    "raw input (no 0.67 Hz decomposition)"
+  ]
+}

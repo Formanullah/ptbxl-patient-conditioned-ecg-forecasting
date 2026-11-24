@@ -1,6 +1,6 @@
 # Forecasting the 12-lead ECG on PTB-XL: a leakage-controlled study of what can be predicted, and how to measure it
 
-*Interim report covering Phases 0–9 · 2026-11-23 · Phases 10–19 are ongoing (§8)*
+*Report covering Phases 0–16 and 18 · 2026-11-24 · Phase 17 (one-time fold-10 test) not yet run (§8)*
 
 ## Abstract
 
@@ -38,8 +38,19 @@ the first 7 s of a native 100 Hz recording, forecast the next 2.9 s.
   0.4% of MAE. More data saturates: 80% of the training patients reach the full-data
   MAE.
 
-**Conclusion.** The learning objective, not data, preprocessing or architecture, is
-the bottleneck.
+- **Conditioning on the repeat-beats forecast is what helps (Phases 10–18).** A
+  CNN-LSTM that learns a per-step, per-lead gate on the `sn4` repeat-beats forecast,
+  plus a correction, beats the flat line and the L1 CNN-LSTM on MAE *and* every
+  gatekeeper in 9/9 folds (final model: MAE 0.0840 mV, template 0.089 mV, timing
+  114 ms vs L1 0.0866 / 0.131 / 270). It still does **not** beat `sn4` on beat
+  morphology or timing: it forecasts damped copies of the repeated beats (≈ 28% of
+  true amplitude). Its gain over L1 comes entirely from the most periodic 40% of
+  records; in AF/flutter it is no better than L1.
+
+**Conclusion.** The learning objective, not data, preprocessing or architecture, was
+the bottleneck under L1; passing a causal repeat-beats forecast through a learned
+gate is the first change that improves accuracy and plausibility together. No
+held-out test result exists yet (fold 10 sealed).
 
 ---
 
@@ -285,37 +296,40 @@ family on pointwise and timing-tolerant error, but no model yet produces
 physiologically plausible beats. The next step is the training objective, not more
 data, preprocessing or capacity.
 
-## 8. Ongoing and future work (Phases 10–19)
+## 8. Phases 10–18 (2026-11-24)
 
-| Phase | Plan |
-|---|---|
-| 10 Training objectives | On CNN-LSTM and Transformer: derivative and spectral loss terms, rhythm conditioning with the repeat-beats forecast as input, and (cost permitting) a soft-DTW shape/time loss. Same rule and protocol; 9-fold CV for finalists |
-| 11 Hyperparameters | Capacity and schedule for the selected family and objective |
-| 12 Robustness | 9-fold CV, per-device and per-quality strata |
-| 13 Physiological plausibility | Lead consistency, wave amplitudes, beat timing against the bands of D6.6 |
-| 14–15 Error analysis | By rhythm, diagnosis, age, sex, device; per lead |
-| 16–19 | Final model, one-time fold-10 test evaluation, ablations (incl. the adopted input transform), documentation |
+| Phase | Result | Report |
+|---|---|---|
+| 10 Objectives (CNN-LSTM only, D10.0) | `sn4`-gated CNN-LSTM beats flat and L1 on MAE and all gatekeepers (9/9 folds); spectral loss improves shape but costs MAE; derivative loss no effect; nothing beats `sn4` on template/timing | [10](phase10_objectives/REPORT.md) |
+| 11 Hyperparameters | LSTM hidden 256 adopted on fold 9 (−0.77 µV MAE, gatekeepers n.s.) | [11](phase11_tuning/REPORT.md) |
+| 12 Robustness | OOF MAE 0.0840 mV (fold SD 0.0009); beats flat in every stratum, L1 in all but AF/flutter; robust to history noise; not to a missing lead II. **9-fold CV shows hidden 256 is worse than hidden 128 on template (+1.3 µV) and timing (+5 ms)** | [12](phase12_robustness/REPORT.md) |
+| 13 Plausibility | Correct beat count, 34% of records ≤ 50 ms, but beats damped to ≈ 28% amplitude; limb-lead relations broken in 19% of records (L1: 3%) by the per-lead gate | [13](phase13_plausibility/REPORT.md) |
+| 14 Patient factors | After adjustment, error rises with AF/flutter (+27%), hypertrophy (+24%), pacing (+23%) and baseline wander; device effects mostly vanish | [14](phase14_patient_errors/REPORT.md) |
+| 15 Signal factors | Gain over L1 only in the most periodic 40% of records (+15 µV in the top quintile; −1.5 µV in the bottom); the gate tracks periodicity (ρ 0.47) and fades with horizon (0.36 → 0.16) | [15](phase15_signal_errors/REPORT.md) |
+| 16 Final model | Hidden-256 gated CNN-LSTM, 6 seeds on folds 1–9, hashed in `MANIFEST.json`; L1 reference likewise | [16](phase16_final/REPORT.md) |
+| 17 Test (fold 10) | **Not run** (user decision); pre-registered, script dry-run checked on fold 9 | [17](phase17_test/PREREGISTRATION.md) |
+| 18 Ablations | Skip path essential (`sn4` as input only = no `sn4`); removing the gate restores `sn4`-quality shape/timing at +16 µV MAE; **raw input beats the adopted decomposition** (−1.1 µV MAE) | [18](phase18_ablations/REPORT.md) |
 
-### Addendum (2026-11-24): Phase 10 completed
+**Open decisions before the test (D12.1, D18.1):** Phase 12's CV and Phase 18's
+ablation each point to a variant that the pre-registered fold-9 rules did not select
+(hidden 128 rather than 256; raw input rather than the decomposition). Fold 10 is
+still sealed, so the final model can still be changed on development evidence alone.
 
-Phase 10 ran on CNN-LSTM only (D10.0). Conditioning CNN-LSTM on the `sn4` forecast
-through a learned per-step, per-lead gate is the first learned model that beats flat and
-the L1 CNN-LSTM on MAE and every gatekeeper (9-fold CV, 9/9 folds: MAE 0.0850 vs
-0.0866 mV, template MAE 0.088 vs 0.131 mV, beat timing 109 vs 270 ms). It still does not
-beat `sn4` on template MAE or beat timing. A spectral loss term improves shape and
-timing but costs MAE; a derivative term has no useful effect. Details:
-[Phase 10 report](phase10_objectives/REPORT.md). No fold-10 result exists.
+**Additional limitations (Phases 10–18).** One family (CNN-LSTM) for the objectives;
+selection on fold 9 with confirmation only partly multi-fold; gate applied per lead
+(breaks lead relations); detector-dependent timing metric; all results on folds 1–9.
 
 ## 9. Reproducing this report
 
 ```sh
 uv sync --locked --extra cpu --extra tracking      # environment
 uv run python scripts/download_ptbxl.py            # data (SHA-256 verified)
-uv run pytest -q                                   # 98 tests
+uv run pytest -q                                   # 103 tests
 # then each phase's script as listed in its report, e.g.
 uv run python research/phase9_models.py --stage A  # ... B, C, D, report
 ```
 
 Per-phase reports, pre-registrations and tables are in `reports/phase*/`, and every
-decision is in [DECISION_LOG.md](DECISION_LOG.md). The full Phase 0–9 pipeline takes
-about one day of CPU time on a 40-core machine; caches make reruns cheap.
+decision is in [DECISION_LOG.md](DECISION_LOG.md). Phases 0–9 take about one day of CPU
+time on a 40-core machine and Phases 10–18 about another day (`research/phase10_objectives.py`,
+`phase11_tuning.py`, `run_12_18.py`); caches make reruns cheap.

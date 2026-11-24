@@ -1,0 +1,24 @@
+{
+  "largest_adjusted_effects_pct": {
+    "rhythm_AF/flutter": 26.7,
+    "dx_HYP_yes": 23.7,
+    "rhythm_paced": 23.1,
+    "log_baseline_wander": 23.0,
+    "age_<40": 14.2,
+    "heart_rate_>100": 14.2
+  },
+  "factor_levels_where_final_not_better_than_l1": [
+    [
+      "age",
+      "<40"
+    ],
+    [
+      "rhythm",
+      "AF/flutter"
+    ],
+    [
+      "dx_NORM",
+      "yes"
+    ]
+  ]
+}

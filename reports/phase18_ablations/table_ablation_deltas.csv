@@ -1,0 +1,6 @@
+ablation,vs,d_mae,d_mae_lo,d_mae_hi,d_dtw_mae,d_dtw_mae_lo,d_dtw_mae_hi,d_template_mae,d_template_mae_lo,d_template_mae_hi,d_beat_timing_ms,d_beat_timing_ms_lo,d_beat_timing_ms_hi,beats
+no gate (sn4 + correction),final,16.071,14.558,17.749,-8.3677,-9.9191,-6.5759,-29.092,-31.454,-26.509,-37.16,-41.963,-32.331,False
+sn4 as input only (no skip),final,4.7548,3.833,5.8556,9.3896,8.1019,10.828,35.54,32.516,38.928,137.6,131.62,143.56,False
+raw input (no 0.67 Hz decomposition),final,-1.1414,-1.774,-0.48919,-1.0377,-1.7731,-0.30003,-1.9062,-4.5539,0.71374,-6.314,-13.018,0.47002,True
+"no sn4 (L1 CNN-LSTM, Phase 9)",final,2.8741,1.9915,3.8583,8.7155,7.467,10.087,35.353,32.534,38.366,140.4,134.33,146.44,False
+sn4 alone,final,33.83,32.055,35.506,10.485,8.6404,12.142,-29.169,-31.625,-26.829,-37.311,-41.817,-32.905,
