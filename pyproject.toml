@@ -30,6 +30,7 @@ ptbxl-forecast = "ptbxl_forecast.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.15,<1"]
+notebook = ["jupyterlab>=4,<5", "ipykernel>=6.29,<8"] # notebooks/ (uv sync --group notebook)
 
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]

@@ -13,6 +13,11 @@ phase by phase. Each phase ends with a report and a recorded go/no-go decision i
 
 Presentation (32 slides with speaker notes): [reports/presentation/PTBXL_ECG_forecasting.pptx](reports/presentation/PTBXL_ECG_forecasting.pptx).
 
+Hands-on walkthrough (configurable, with plots; minutes on CPU):
+[notebooks/ptbxl_experiment_walkthrough.ipynb](notebooks/ptbxl_experiment_walkthrough.ipynb).
+Install the kernel with `uv sync --locked --extra cpu --group notebook`, then
+`uv run jupyter lab` or pick the `.venv` kernel in VS Code.
+
 | Phase | Status | Report |
 |---|---|---|
 | 0 Forecasting feasibility | Done: 7→3 kept, with timing-aware evaluation (D0.8) | [report](reports/phase0_feasibility/REPORT.md) |
@@ -140,6 +145,7 @@ src/ptbxl_forecast/ config, data access (sealed test fold, cleaning rules), qual
 tests/              unit tests
 scripts/            data download/verification
 research/           phase analyses and benchmarks
+notebooks/          walkthrough notebook (data → baselines → training → metrics → plots)
 reports/            phase reports and the decision log
 archive/            earlier implementations (Week 5 and before), unchanged
 ```

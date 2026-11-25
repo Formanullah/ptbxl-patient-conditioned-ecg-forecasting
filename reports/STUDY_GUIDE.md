@@ -11,6 +11,7 @@ numbers below come from the phase reports; follow the links for the evidence.
 | 15 min | §2 (the story) and §6 (key numbers) of this guide |
 | 1 hour | [README](../README.md) phase table → [FINAL_REPORT.md](FINAL_REPORT.md) (abstract, §5 Discussion, §6 Limitations, §8) → the [presentation](presentation/PTBXL_ECG_forecasting.pptx) with speaker notes open |
 | 1 day | All of the above, then every phase in the order of §4, reading `PREREGISTRATION.md` before `REPORT.md`, then the [decision log](DECISION_LOG.md) |
+| Hands-on | The [walkthrough notebook](../notebooks/ptbxl_experiment_walkthrough.ipynb): data, baselines, training, metrics and plots in one configurable notebook (a few minutes on CPU) |
 
 The speaker notes of every slide follow the same structure (purpose, key
 interpretation, discussion points, details not on the slide, likely questions), so the
@@ -219,4 +220,6 @@ GPU; external validation on another dataset (fold 10 is now used).
 
 The setup and per-phase commands are in the [README](../README.md). Each phase report
 starts with the exact command that produced it, and [FINAL_REPORT.md §9](FINAL_REPORT.md#9-reproducing-this-report)
-lists the full sequence.
+lists the full sequence. The last section of the
+[walkthrough notebook](../notebooks/ptbxl_experiment_walkthrough.ipynb) lists every
+command in order and can run selected phases.
