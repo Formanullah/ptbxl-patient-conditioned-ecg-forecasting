@@ -1,0 +1,27 @@
+extends: research.yaml
+
+schema: 3
+study_id: primary_7s3s_v3
+run_mode: large
+
+profile: research_100hz_large_medium
+
+data:
+  cache: data/research_100hz_large_medium_p0
+
+subset:
+  mode: large
+  seed: 42
+  patients:
+    train: 3000
+    val: 600
+    test: 200
+
+paths:
+  experiments: experiments/research_100hz_large_medium
+  outputs: outputs/research_100hz_large_medium
+  documents: Project_Documents/research_100hz_large_medium
+
+  cache: data/study_v3_large
+  results: results
+

@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "name": "tft_P0_F0_large_80e",
+  "signature": "8dbf1d8ece8945a6e5934c892c3f8edf4e62b7633fc337c85a85b20c61c2191c",
+  "scientific": {
+    "schema": 1,
+    "cohort": "148d3d318f7840826c7fa5a35180a6c775a9b60a6bcdb7b14ff333fb594ad884",
+    "preprocessing": "P0",
+    "filter": null,
+    "scaler_sha256": "bdbe11fa8597d54d9d1a403dac63cf4811e32334eced1e48c60a647b03725f46",
+    "architecture": "tft",
+    "model": {
+      "hidden": 128,
+      "depth": 2,
+      "dropout": 0.2,
+      "static_embedding": 32,
+      "fusion": "late",
+      "kernels": [
+        7,
+        5,
+        3
+      ],
+      "pool": 2,
+      "residual": false,
+      "head_width": 256
+    },
+    "features": [],
+    "feature_statistics": {
+      "groups": {},
+      "statistics": {}
+    },
+    "budget": 90,
+    "training": {
+      "seed": 42,
+      "lr": 0.001,
+      "batch_size": 64,
+      "weight_decay": 0.0001,
+      "gradient_clip": 1.0
+    },
+    "source": {
+      "compare.py": "a83c4b3ccbfc4ee6c27ca0e5584ae01a96115a187072d6ff09123b1f55255c72",
+      "evaluate.py": "7904d8c78aa4cd590b9e37790c77685932f9bab641ea096232bd18b7e1d8ff8d",
+      "feature_selection.py": "92e0a439ff4af330e7125eda265757ba2537949feb2c449302eebe2a2d213a03",
+      "leakage_audit.py": "181395b3e301efb876ed0ef407bffc805164527e5d18c8859ee2ccb411ef392c",
+      "metrics.py": "cd34fd9485d0cd6b32612495fddd9fc687c451fbc71f7e7645c6c5f0fa189f5f",
+      "models.py": "9160dda5a6a13c7b362607b8bcd872fad92aa5077912e725c405a96c6cbc5bf2",
+      "morphology.py": "5a7e4fb791c1767695e224db07771edff121061836bca24c472515b42c7851d5",
+      "preparation.py": "7aeb6ea71ac9d28899ed9fe58e5e977918de1447320ba14a3fbeed803f9ff982",
+      "preprocessing.py": "7d0f0b7acd5f4f23baef507a4d363f866d28af93852b45b44876e55750edd1f7",
+      "preprocessing_diagnostics.py": "c9f4769143df601cd2c47d26c96fecddc2c616053f99749100b47439c636545b",
+      "report.py": "e91d580c54d0c30eddb8952bc00ea640afa7e931e256cfe6ea8ba0b4c4c66939",
+      "research.py": "d2cb7d6b4f92d763775416c8d2f191984ce5e41867819e221164adea88d67bb5",
+      "run_tests.py": "526f47d0d3e1945b6a14c5fbeebb3dd5e3d321e8c8a7019050475785efa13fb8",
+      "status.py": "01f2feffe71e48e151f0b7a05dfbd857eed73f12d646fc94b5aeec330a0fb204",
+      "data.py": "a8771d4173e8c19632112c9c00c13c3a52406f91b65871e588d4bb7d82918308",
+      "fixtures.py": "0743717b72b66b1de87f60af2ea09fb9d07f7fdea5b9bda5d3b6df1106551fbd",
+      "pipeline.py": "28cde4631061f5e28721451e07092c120167e0b558364e902725d0b3f96030bd",
+      "study.py": "8aab50d3a4288e75507f97e2438c24a4d6eca7c70bbdbb5c6927ea42a23cf112",
+      "visualize.py": "3e050e5e11d0c48891293b5f16b21f80c93e7e245ea2d3dbf68e8d91f43beed6",
+      "train.py": "990e51eb89049abe06eeb7f2a664e7c748bec026f691b95cd882ac191f9192c4",
+      "config.py": "7deec5f94a6a25d0bea96795b0456a5e2511202602fd7962b1e77ba543d4819c"
+    },
+    "versions": {
+      "torch": "2.15.0+cpu",
+      "numpy": "2.5.4",
+      "scipy": "1.18.1",
+      "pandas": "3.0.6",
+      "wfdb": "4.3.1"
+    },
+    "synthetic": false
+  },
+  "config": {
+    "profile": "research_100hz_large_medium",
+    "data": {
+      "root": "/media/ehsan/MyFiles3/FraUAS/HIS Project/PTB-XL",
+      "cache": "data/research_100hz_large_medium_p0",
+      "sampling_rate": 100,
+      "history_seconds": 5.0,
+      "horizon_seconds": 3.0,
+      "window_stride_seconds": 1.0,
+      "start": 0,
+      "layout": "time_first",
+      "history": 500,
+      "horizon": 300,
+      "stride": 100
+    },
+    "subset": {
+      "mode": "large",
+      "seed": 42,
+      "patients": {
+        "train": 3000,
+        "val": 600,
+        "test": 200
+      }
+    },
+    "preprocessing": {
+      "filter": "none",
+      "scaling": "zscore",
+      "order": 4,
+      "low_hz": 0.5,
+      "high_hz": 40.0
+    },
+    "features": {},
+    "model": {
+      "hidden": 128,
+      "depth": 2,
+      "dropout": 0.2,
+      "static_embedding": 32,
+      "fusion": "late",
+      "kernels": [
+        7,
+        5,
+        3
+      ],
+      "pool": 2,
+      "residual": false,
+      "head_width": 256
+    },
+    "training": {
+      "seed": 42,
+      "epochs": 60,
+      "early_stopping": false,
+      "patience": 10,
+      "batch_size": 64,
+      "lr": 0.001,
+      "weight_decay": 0.0001,
+      "gradient_clip": 1.0,
+      "num_workers": 0,
+      "threads": 4,
+      "device": "auto",
+      "loss": "mse",
+      "derivative_weight": 0.0,
+      "spectral_weight": 0.0,
+      "scheduler": "none"
+    },
+    "contrastive": {
+      "weight": 0.1,
+      "temperature": 0.1,
+      "jitter_std": 0.01,
+      "gain_min": 0.95,
+      "gain_max": 1.05
+    },
+    "evaluation": {
+      "bootstrap_samples": 1000,
+      "peak_tolerance_ms": 100,
+      "allow_test": false
+    },
+    "paths": {
+      "experiments": "experiments/research_100hz_large_medium",
+      "outputs": "outputs/research_100hz_large_medium",
+      "documents": "Project_Documents/research_100hz_large_medium",
+      "cache": "data/study_v3_large",
+      "results": "results"
+    },
+    "schema": 3,
+    "study_id": "primary_7s3s_v3",
+    "run_mode": "large"
+  },
+  "cache": "/media/ehsan/MyFiles3/FraUAS/HIS Project/Code/ptbxl-patient-conditioned-ecg-forecasting/notebooks/data/study_v3_large/148d3d318f784082",
+  "architecture": "tft",
+  "preprocessing": "P0",
+  "feature_set": "F0",
+  "selected_features": [],
+  "selection": null,
+  "parameters": 2245520,
+  "epoch_budget": 90,
+  "smoke": false,
+  "environment": {
+    "python": "3.13.5",
+    "torch": "2.15.0+cpu",
+    "device": "cpu",
+    "gpu": null
+  }
+}
