@@ -1,7 +1,0 @@
-{
-  "state": "completed",
-  "epochs_completed": 120,
-  "budget": 120,
-  "best_validation_mae_mV": 0.11523457442720732,
-  "runtime_seconds": 201.14178503000585
-}
