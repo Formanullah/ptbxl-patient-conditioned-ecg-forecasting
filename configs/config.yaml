@@ -10,8 +10,6 @@ data:
 cohorts:
   pilot: {train: 300, val: 75}
   medium: {train: 1500, val: null}
-  large: {train: 3000, val: 600}
-  
 preprocessing:
   order: 4
   low_hz: 0.5
