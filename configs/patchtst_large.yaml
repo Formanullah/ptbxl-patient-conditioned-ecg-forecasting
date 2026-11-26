@@ -1,0 +1,50 @@
+schema: 3
+study_id: primary_7s3s_v3
+run_mode: pilot
+data:
+  root: PTB-XL
+  sampling_rate: 100
+  history: 700
+  horizon: 300
+  synthetic: false
+cohorts:
+  pilot: {train: 300, val: 75}
+  medium: {train: 1500, val: null}
+  large: {train: 3000, val: 600}
+  
+preprocessing:
+  order: 4
+  low_hz: 0.5
+  high_hz: 40.0
+features:
+  prior_history: false
+  selected_groups: 3
+  permutation_repeats: 5
+model:
+  hidden: 128
+  depth: 2
+  dropout: 0.2
+  head_width: 256
+  static_embedding: 16
+training:
+  seed: 42
+  epochs: 60
+  pilot_epochs: 2
+  full_epochs: 120
+  batch_size: 64
+  lr: 0.0005
+  learning_rates: [0.0001, 0.0005, 0.001]
+  tune_hidden_128: false
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  num_workers: 0
+  threads: 4
+  device: auto
+  allow_full_cpu: false
+evaluation:
+  bootstrap_samples: 1000
+  final_test: false
+  example_ecg_id: null
+paths:
+  cache: data/study_v3
+  results: results

@@ -206,6 +206,7 @@ def run_directory(cfg, architecture, variant):
 COHORT_LIMITS = {
     "pilot": {"train": 300, "val": 75},
     "medium": {"train": 1500, "val": None},
+    "large": {"train": 3000, "val": 600},
     "full": {"train": None, "val": None},
 }
 
