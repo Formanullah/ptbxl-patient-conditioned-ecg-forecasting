@@ -3,7 +3,6 @@ from torch import nn
 
 
 class GatedResidualNetwork(nn.Module):
-
     def __init__(self, dim, dropout=0.2):
         super().__init__()
 
@@ -12,10 +11,7 @@ class GatedResidualNetwork(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        self.gate = nn.Sequential(
-            nn.Linear(dim, dim),
-            nn.Sigmoid()
-        )
+        self.gate = nn.Sequential(nn.Linear(dim, dim), nn.Sigmoid())
 
         self.norm = nn.LayerNorm(dim)
 
@@ -33,16 +29,8 @@ class GatedResidualNetwork(nn.Module):
 
 
 class TFTForecaster(nn.Module):
-
     def __init__(
-        self,
-        static_dim=0,
-        horizon=300,
-        hidden=64,
-        depth=1,
-        dropout=0.2,
-        head_width=128,
-        **kwargs
+        self, static_dim=0, horizon=300, hidden=64, depth=1, dropout=0.2, head_width=128, **kwargs
     ):
         super().__init__()
 
@@ -51,10 +39,7 @@ class TFTForecaster(nn.Module):
         self.input_projection = nn.Linear(12, hidden)
 
         self.grn_stack = nn.ModuleList(
-            [
-                GatedResidualNetwork(hidden, dropout)
-                for _ in range(max(depth, 1))
-            ]
+            [GatedResidualNetwork(hidden, dropout) for _ in range(max(depth, 1))]
         )
 
         encoder_layer = nn.TransformerEncoderLayer(

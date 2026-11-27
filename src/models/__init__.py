@@ -2,10 +2,9 @@
 
 from .cnn_lstm import CNNLSTMForecaster
 from .lstm import LSTMForecaster
-from .tft import TFTForecaster
 from .patchtst import PatchTSTForecaster
 from .PatchTST_32 import PatchTST32
-
+from .tft import TFTForecaster
 
 
 def build_model(architecture, static_dim=0, horizon=300, **settings):
@@ -24,4 +23,6 @@ def build_model(architecture, static_dim=0, horizon=300, **settings):
             **settings,
         )
 
-    raise ValueError(f"Unsupported architecture: {architecture}. Choose from lstm, cnn_lstm, tft, patchtst.")
+    raise ValueError(
+        f"Unsupported architecture: {architecture}. Choose from lstm, cnn_lstm, tft, patchtst."
+    )

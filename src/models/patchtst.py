@@ -1,9 +1,7 @@
-import torch
 from torch import nn
 
 
 class PatchTSTForecaster(nn.Module):
-
     def __init__(
         self,
         static_dim=0,

@@ -5,13 +5,9 @@
 /outputs/*
 !/outputs/pilot/
 !/outputs/research_100hz_dev/
-<<<<<<< HEAD
 /outputs/pilot/*.zip
 /outputs/pilot/smoke/
-=======
-/outputs/pilot/smoke/
 .DS_Store
->>>>>>> origin/work/manual-src-workflow
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -25,14 +21,8 @@ __pycache__/
 *.pt
 *.npz
 *.npy
-<<<<<<< HEAD
-*colab_bundle.zip
-# Reversible local cleanup archives and future transfer bundles.
-*.zip
-=======
 # Reversible local cleanup archives and future transfer bundles.
 *.zip
 
 /results/
 /notebooks/*executed*.ipynb
->>>>>>> origin/work/manual-src-workflow

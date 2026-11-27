@@ -39,7 +39,7 @@ def main(argv=None):
     )
     parser.add_argument("--config", default="configs/config.yaml")
     parser.add_argument("--mode", choices=["pilot", "medium", "full"])
-    parser.add_argument("--model", choices=["lstm", "cnn_lstm"], default="lstm")
+    parser.add_argument("--model", choices=["lstm", "cnn_lstm", "tft"], default="lstm")
     parser.add_argument("--preprocessing", choices=["P0", "P1"], default="P0")
     parser.add_argument("--features", choices=["F0", "F1", "F2", "expanded"], default="F0")
     parser.add_argument("--run", nargs="+")
@@ -49,6 +49,8 @@ def main(argv=None):
         "--fixture-dir", type=Path, help="Synthetic software checks only; never PTB-XL performance"
     )
     args = parser.parse_args(argv)
+    if args.stage == "train" and args.model == "tft" and args.features != "F0":
+        parser.error("The current TFT implementation supports ECG-only inputs (--features F0)")
     cfg = load_config(args.config, args.mode)
     if args.fixture_dir:
         cfg = fixture_config(args.fixture_dir, cfg)

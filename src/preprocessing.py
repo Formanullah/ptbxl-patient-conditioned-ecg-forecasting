@@ -1,4 +1,8 @@
+"""Causal history transforms and training-fitted waveform/static scaling."""
+
+import ast
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import signal
